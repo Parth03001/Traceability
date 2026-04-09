@@ -1,0 +1,240 @@
+.station-box {
+  position: absolute;
+  background-color: #ececec;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: var(--card-shadow);
+  /* Width is determined by content (stationCount × 40px columns).
+     Height is fixed to exactly 5 grid cells = 200px so boxes align to the grid. */
+  height: 160px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  z-index: 5;
+  overflow: visible;
+}
+
+
+.station-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 10px;
+  gap: 2px;
+  background-color: var(--bg-light);
+  border-bottom: 1px solid var(--border-color);
+  cursor: grab;
+  border-radius: 2px 2px 0 0;
+  flex-shrink: 0;
+}
+
+.station-box-header:active {
+  cursor: grabbing;
+}
+
+.station-box-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  letter-spacing: 0.5px;
+}
+
+.station-box-controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.station-box-ctrl-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 5px;
+  color: var(--text-dark);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s;
+}
+
+.station-box-ctrl-btn:hover {
+  background-color: var(--border-color);
+}
+
+.station-box-ctrl-btn--delete {
+  color: #e53e3e;
+  border-color: #feb2b2;
+}
+
+.station-box-ctrl-btn--delete:hover {
+  background-color: #fff5f5;
+}
+
+/* Grid */
+.station-box-body {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.station-grid {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* Station ID header — spans 2 sub-columns (40px total) */
+.station-grid-header-cell {
+  width: 40px;
+  padding: 3px 2px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  background-color: #45b480;
+  border-right: 1px solid #1c4532;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.station-grid-header-cell:last-child {
+  border-right: none;
+}
+
+/* Left label sub-column (M / P / D / U / Z) */
+.station-grid-label {
+  width: 14px;
+  min-width: 14px;
+  height: 20px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 9px;
+  font-weight: 700;
+  color: transparent;
+  background-color: var(--bg-light);
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Description row below station ID headers */
+.station-grid-desc-cell {
+  height: 16px;
+  padding: 1px 3px;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-gray);
+  background-color: #f5f5f5;
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.station-grid-desc-cell:last-child {
+  border-right: none;
+}
+
+/* Z label — one cell per station spanning label+value cols, invisible text */
+.station-grid-label--z {
+  color: transparent;
+  background-color: var(--bg-light);
+  height: 20px;
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Right value sub-column */
+.station-grid-value {
+  width: 26px;
+  min-width: 26px;
+  height: 20px;
+  background-color: #ffffff;
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Remove trailing borders on last station */
+.station-grid tr td:last-child,
+.station-grid tr th:last-child {
+  border-right: none;
+}
+
+/* ── Per-station port dots (top & bottom) ─────────────────────────────────── */
+/* Left position calculated in JS: 17 + i*40 px (centers over each 40px column) */
+.station-sid-port {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--mahindra-red);
+  border: 2px solid #fff;
+  cursor: crosshair;
+  pointer-events: all;
+  box-shadow: 0 0 0 1px var(--mahindra-red);
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.1s, background-color 0.1s;
+  z-index: 30;
+}
+
+.station-sid-port--top    { top: -7px; }
+.station-sid-port--bottom { bottom: -7px; }
+
+.station-box:hover .station-sid-port {
+  opacity: 1;
+}
+
+.station-sid-port:hover {
+  background: var(--mahindra-red-dark);
+  transform: scale(1.4);
+}
+
+/* ── Box-level port dots: left and right only ─────────────────────────────── */
+.station-box-port {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--mahindra-red);
+  border: 2px solid #fff;
+  cursor: crosshair;
+  pointer-events: all;
+  box-shadow: 0 0 0 1px var(--mahindra-red);
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.1s, background-color 0.1s;
+  z-index: 30;
+}
+
+.station-box:hover .station-box-port {
+  opacity: 1;
+}
+
+.station-box-port--left {
+  left: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.station-box-port--left:hover {
+  transform: translateY(-50%) scale(1.4);
+}
+
+.station-box-port--right {
+  right: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.station-box-port--right:hover {
+  transform: translateY(-50%) scale(1.4);
+}
