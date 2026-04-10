@@ -19,8 +19,8 @@ const CANVAS_SIZE = 5000;
 
 // Box dimensions are multiples of GRID so edges align to grid lines
 const boxSize = (stationCount) => ({
-  w: Math.max(1, stationCount) * GRID,  // 40px per station column, min 5 cols = 200px
-  h: 4 * GRID,                          // 160px = 4 grid rows
+  w: Math.max(2, stationCount) * GRID + 4, // 40px per station + 4px border, min 2 cols = 84px
+  h: 4 * GRID,                             // 160px = 4 grid rows
 });
 
 const snap = (v) => Math.round(v / GRID) * GRID;
@@ -31,8 +31,8 @@ const BYPASS_HALF = BYPASS_SIZE / 2;
 const snapBypass = (v) => Math.round((v + BYPASS_HALF) / GRID) * GRID - BYPASS_HALF;
 
 const overlaps = (a, b) => {
-  const sa = boxSize(a.stationCount ?? a.stationIds?.length ?? 1);
-  const sb = boxSize(b.stationCount ?? b.stationIds?.length ?? 1);
+  const sa = boxSize(a.stationCount ?? a.stationIds?.length ?? 2);
+  const sb = boxSize(b.stationCount ?? b.stationIds?.length ?? 2);
   return !(
     a.position.x + sa.w + MIN_GAP <= b.position.x ||
     b.position.x + sb.w + MIN_GAP <= a.position.x ||
@@ -175,7 +175,7 @@ function LayoutPreparation({
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
     loadedBoxes.forEach((box) => {
-      const w = boxSize(box.stationIds?.length ?? 5).w;
+      const w = boxSize(box.stationIds?.length ?? 2).w;
       const h = 4 * GRID; // boxSize height is always 160px
       minX = Math.min(minX, box.position.x);
       minY = Math.min(minY, box.position.y);

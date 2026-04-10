@@ -11,7 +11,7 @@ import './ZStageDashboard.css';
 const GRID = 40;
 const CANVAS_SIZE = 5000;
 
-const boxWidth = (stationCount) => Math.max(1, stationCount) * 40 + 4;
+const boxWidth = (stationCount) => Math.max(2, stationCount) * 40 + 4;
 
 // ── Column definitions (mirror InputData) ─────────────────────────────────────
 const MONTHLY_KEYS = [

@@ -76,8 +76,7 @@ function StationBox({
         id={id}
         className="station-box"
         style={{
-          width: `${Math.max(1, stationIds.length) * 40 + 4}px`,
-          minWidth: '80px',
+          width: `${Math.max(2, stationIds.length) * 40 + 4}px`,
           ...(isDragging ? { zIndex: 1000 } : {}),
         }}
       >
