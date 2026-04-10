@@ -145,7 +145,7 @@ export function buildObstacles(boxes, marginCells = 0) {
  * @param  {Set<string>}   obstacles — grid cells to avoid ("gx,gy" keys)
  * @returns {Array<[number,number]>} waypoints in canvas space
  */
-export function routePath(start, end, obstacles) {
+export function routePath(start, end, _obstacles) {
   if (!start || !end) return [];
 
   const { x: sx, y: sy, dir: sDir } = start;
@@ -154,120 +154,33 @@ export function routePath(start, end, obstacles) {
   const SD = DIR_DELTA[sDir] || [0, 0];
   const ED = DIR_DELTA[eDir] || [0, 0];
 
-  // Forced waypoints one GRID step outside each port, ensuring the first/last
-  // segment exits/enters in the declared direction.
+  // One forced step outside each port so the path exits/enters the box cleanly.
   const p1x = sx + SD[0] * GRID;
   const p1y = sy + SD[1] * GRID;
   const p2x = ex + ED[0] * GRID;
   const p2y = ey + ED[1] * GRID;
 
-  // ── Direction-aware grid snapping ────────────────────────────────────────────
-  // Top/bottom port x-positions have a 17 px offset from the 40 px grid
-  // (formula: bx + 17 + i×40).  Naïve Math.round snaps to the nearest cell,
-  // which can be 17 px in the WRONG direction (backward relative to the
-  // destination), causing a backward staircase jog at the start/end of the path.
-  //
-  // Fix: for top/bottom exits, snap g1x TOWARD the destination (ceil when going
-  // right, floor when going left).  For the approach (g2x), snap from the
-  // direction we're coming FROM.  This ensures the small alignment segment
-  // always goes the same direction as the main path and merges away cleanly.
-  const goingRight = ex >= sx;
+  const sVert = sDir === 'top' || sDir === 'bottom';
+  const eVert = eDir === 'top' || eDir === 'bottom';
 
-  let g1x, g1y, g2x, g2y;
-  if (sDir === 'top' || sDir === 'bottom') {
-    // x has 17 px offset — snap toward goal
-    g1x = goingRight ? Math.ceil(p1x / GRID) : Math.floor(p1x / GRID);
-    g1y = Math.round(p1y / GRID); // y is always grid-aligned for top/bottom ports
+  let pts;
+  if (sVert && eVert) {
+    // Both vertical ports (e.g. bottom→top): Z-shape with a horizontal mid-bridge
+    const midY = (p1y + p2y) / 2;
+    pts = [[sx, sy], [p1x, p1y], [p1x, midY], [p2x, midY], [p2x, p2y], [ex, ey]];
+  } else if (!sVert && !eVert) {
+    // Both horizontal ports (e.g. right→left): Z-shape with a vertical mid-bridge
+    const midX = (p1x + p2x) / 2;
+    pts = [[sx, sy], [p1x, p1y], [midX, p1y], [midX, p2y], [p2x, p2y], [ex, ey]];
+  } else if (sVert && !eVert) {
+    // Vertical exit → horizontal entry: L-shape, corner at (p1x, p2y)
+    pts = [[sx, sy], [p1x, p1y], [p1x, p2y], [p2x, p2y], [ex, ey]];
   } else {
-    g1x = Math.round(p1x / GRID);
-    g1y = Math.round(p1y / GRID);
-  }
-  if (eDir === 'top' || eDir === 'bottom') {
-    // Approach from the start side: if going right → last BFS step arrives from
-    // the left → g2x should be to the LEFT of p2x (floor)
-    g2x = goingRight ? Math.floor(p2x / GRID) : Math.ceil(p2x / GRID);
-    g2y = Math.round(p2y / GRID);
-  } else {
-    g2x = Math.round(p2x / GRID);
-    g2y = Math.round(p2y / GRID);
+    // Horizontal exit → vertical entry: L-shape, corner at (p2x, p1y)
+    pts = [[sx, sy], [p1x, p1y], [p2x, p1y], [p2x, p2y], [ex, ey]];
   }
 
-  // Trivial case: both forced waypoints on the same grid cell
-  if (g1x === g2x && g1y === g2y) {
-    return simplify([[sx, sy], [p1x, p1y], [ex, ey]]);
-  }
-
-  const startKey = `${g1x},${g1y}`;
-  const goalKey  = `${g2x},${g2y}`;
-
-  // ── Goal-directed step ordering ───────────────────────────────────────────────
-  // BFS finds *a* shortest path, but which one depends on the expansion order.
-  // By trying directions TOWARD the goal first, BFS naturally finds paths that
-  // travel in the right direction without backtracking.  This prevents the small
-  // alignment jog at the start from becoming a backward staircase step.
-  const dxGoal = g2x - g1x;
-  const dyGoal = g2y - g1y;
-  const dxPref  = Math.sign(dxGoal) || 1;   // preferred horizontal direction
-  const dyPref  = Math.sign(dyGoal) || -1;  // preferred vertical direction
-  // Prefer whichever axis has more distance to cover; fall back to horizontal
-  const STEPS = Math.abs(dxGoal) >= Math.abs(dyGoal)
-    ? [[dxPref, 0], [0, dyPref], [-dxPref, 0], [0, -dyPref]]   // horizontal first
-    : [[0, dyPref], [dxPref, 0], [0, -dyPref], [-dxPref, 0]];  // vertical first
-
-  // BFS with parent-pointer tracking for path reconstruction
-  const parent = new Map([[startKey, null]]);
-  const queue  = [[g1x, g1y]];
-  const LIMIT  = 30000; // cap iterations to avoid UI freeze on pathological layouts
-
-  let found = false;
-  outer: for (let qi = 0; qi < queue.length && qi < LIMIT; qi++) {
-    const [x, y] = queue[qi];
-    for (const [dx, dy] of STEPS) {
-      const nx  = x + dx;
-      const ny  = y + dy;
-      const key = `${nx},${ny}`;
-      if (parent.has(key)) continue;
-      // Keep goal reachable even if it lands inside an obstacle cell
-      if (key !== goalKey && obstacles.has(key)) continue;
-      // Soft canvas bounds (avoid runaway in degenerate layouts)
-      if (nx < -20 || ny < -20 || nx > 300 || ny > 300) continue;
-
-      parent.set(key, [x, y]);
-      if (key === goalKey) { found = true; break outer; }
-      queue.push([nx, ny]);
-    }
-  }
-
-  let gridPath;
-  if (found) {
-    // Reconstruct path by following parent pointers back to start
-    gridPath = [];
-    let cur = [g2x, g2y];
-    while (cur !== null) {
-      gridPath.unshift(cur);
-      cur = parent.get(`${cur[0]},${cur[1]}`);
-    }
-  } else {
-    // Fallback: simple Z-shape (ignores obstacles, but avoids infinite loop)
-    gridPath = [[g1x, g1y], [g1x, g2y], [g2x, g2y]];
-  }
-
-  // Convert grid path back to canvas coords
-  const mid = gridPath.map(([gx, gy]) => [gx * GRID, gy * GRID]);
-
-  // Full path: exact start → forced exit → BFS grid points → forced approach → exact end
-  // We include ALL BFS grid points (including mid[0] ≈ p1 and mid[-1] ≈ p2).
-  // Port x-positions have a 17 px offset from the 40 px grid, so mid[0].x may
-  // differ from p1x by up to ~20 px.  Including mid[0] turns that gap into a
-  // clean short horizontal segment rather than a diagonal.
-  const full = [
-    [sx, sy],
-    [p1x, p1y],
-    ...mid,          // all BFS grid points — no slice, keeps routing axis-aligned
-    [p2x, p2y],
-    [ex, ey],
-  ];
-  return simplify(full);
+  return simplify(pts);
 }
 
 // ─── Path simplifier ──────────────────────────────────────────────────────────
