@@ -63,8 +63,8 @@ export function getPortCanvasPos(portId, boxes, buyoffIcons) {
   // ── Box port ────────────────────────────────────────────────────────────────
   const box = boxes.find((b) => b.id === elemId);
   if (box) {
-    const cols = box.stationIds?.length ?? 5;
-    const w    = Math.max(5, cols) * GRID;
+    const cols = box.stationIds?.length ?? 1;
+    const w    = Math.max(1, cols) * GRID + 4;
     const h    = 4 * GRID; // 160 px
     const { x: bx, y: by } = box.position;
 
@@ -114,8 +114,8 @@ export function getPortCanvasPos(portId, boxes, buyoffIcons) {
 export function buildObstacles(boxes, marginCells = 0) {
   const occ = new Set();
   for (const box of boxes) {
-    const cols = box.stationIds?.length ?? 5;
-    const w    = Math.max(5, cols) * GRID;
+    const cols = box.stationIds?.length ?? 1;
+    const w    = Math.max(1, cols) * GRID + 4;
     const h    = 4 * GRID;
     // Range of grid cells whose bounding rect overlaps [bx, bx+w) × [by, by+h)
     const x1 = Math.floor(box.position.x / GRID)             - marginCells;

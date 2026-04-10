@@ -31,8 +31,8 @@ const BYPASS_HALF = BYPASS_SIZE / 2;
 const snapBypass = (v) => Math.round((v + BYPASS_HALF) / GRID) * GRID - BYPASS_HALF;
 
 const overlaps = (a, b) => {
-  const sa = boxSize(a.stationCount ?? a.stationIds?.length ?? 5);
-  const sb = boxSize(b.stationCount ?? b.stationIds?.length ?? 5);
+  const sa = boxSize(a.stationCount ?? a.stationIds?.length ?? 1);
+  const sb = boxSize(b.stationCount ?? b.stationIds?.length ?? 1);
   return !(
     a.position.x + sa.w + MIN_GAP <= b.position.x ||
     b.position.x + sb.w + MIN_GAP <= a.position.x ||
