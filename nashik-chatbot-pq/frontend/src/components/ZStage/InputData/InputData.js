@@ -50,8 +50,8 @@ const INPUT_HELP = {
     {
       heading: 'Template Tab',
       items: [
-        { icon: '📖', label: 'Column Reference',   desc: 'All three data types are shown on one scrollable page. Each card lists column name, allowed values / format hint, and an example value.' },
-        { icon: '⬇️', label: 'Download Template',  desc: 'Click "Download Template" on any card to get a blank CSV with the correct headers, a hints row, and an example row ready to fill.' },
+        { icon: '📖', label: 'Column Reference',   desc: 'All three data types are shown on one scrollable page. Each card lists the exact column names and allowed values / format hints matching the official template.' },
+        { icon: '⬇️', label: 'Download Template',  desc: 'Click "Download Template" on any card to get the official .xlsx file with the correct column headers only — ready to fill and upload.' },
       ],
     },
     {
@@ -132,103 +132,94 @@ const TRAILING_COLUMNS = [
   { key: 'status_3m',                 label: 'Status (3M)',                 width: 90,  type: 'text'   },
 ];
 
-// ── Template definitions (column name + hint + example value) ────────────────
-// A few representative recent months to include in the Master Data template
-const TEMPLATE_MONTHS = (() => {
-  const now = new Date();
-  const months = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-  }
-  return months;
-})();
+// ── Template definitions — column names match the senior's xlsx templates exactly
+// All months Jan-24 → Mar-26 as they appear in the actual template header row
+const ALL_TEMPLATE_MONTHS = [
+  'Jan-24','Feb-24','Mar-24','Apr-24','May-24','Jun-24',
+  'Jul-24','Aug-24','Sep-24','Oct-24','Nov-24','Dec-24',
+  'Jan-25','Feb-25','Mar-25','Apr-25','May-25','Jun-25',
+  'Jul-25','Aug-25','Sep-25','Oct-25','Nov-25','Dec-25',
+  'Jan-26','Feb-26','Mar-26',
+];
 
 const TEMPLATE_DEFS = {
   master: {
     label: 'Master Data',
-    filename: 'master_data_template.csv',
+    filename: 'master_data_template.xlsx',
     desc: 'Z-Stage concern tracking. Fill in rows below the header and upload via the Upload tab.',
     columns: [
-      { name: 'Sr.No',                       hint: 'Sequential number',                                                         example: '1'            },
-      { name: 'Concern ID',                   hint: 'Unique concern identifier',                                                 example: 'CID-001'      },
-      { name: 'Concern',                      hint: 'Description of the concern',                                                example: 'Surface finish issue' },
-      { name: 'Type',                         hint: 'WH  |  USV',                                                                example: 'WH'           },
-      { name: 'Root Cause',                   hint: 'Root cause analysis',                                                       example: ''             },
-      { name: 'Action Plan',                  hint: 'Corrective action taken / planned',                                         example: ''             },
-      { name: 'Target Date',                  hint: 'YYYY-MM-DD',                                                                example: '2025-06-30'   },
-      { name: 'Closure Date',                 hint: 'YYYY-MM-DD',                                                                example: ''             },
-      { name: 'RYG',                          hint: 'R  |  Y  |  G',                                                             example: 'R'            },
-      { name: 'Attri.',                       hint: 'M&M Design  |  M&M process  |  Supplier Design  |  Supplier Process  |  Under Analysis', example: 'M&M Design' },
-      { name: 'Commodity',                    hint: 'Commodity / material name',                                                  example: ''             },
-      { name: 'Line',                         hint: 'Production line prefix (e.g. T1)',                                           example: 'T1'           },
-      { name: 'Stage No',                     hint: 'Station ID (e.g. T1-01)',                                                    example: 'T1-01'        },
-      { name: 'Z/E',                          hint: 'Z  |  E',                                                                    example: 'Z'            },
-      { name: 'Attribution',                  hint: 'M  |  P  |  D  |  U',                                                       example: 'D'            },
-      { name: 'Part',                         hint: 'Part name or number',                                                        example: ''             },
-      { name: 'Phenomena',                    hint: 'Phenomena / symptom description',                                            example: ''             },
-      { name: 'Total',                        hint: 'Total incidences count',                                                     example: '5'            },
-      ...TEMPLATE_MONTHS.map((m) => ({ name: m, hint: `Monthly count for ${m}`, example: '' })),
-      { name: 'Field Defect After Cut-off',   hint: 'Number of field defects after cut-off date',                                 example: ''             },
-      { name: 'Status (3M)',                  hint: 'R  |  G',                                                                    example: 'R'            },
+      { name: 'Sr.No',                      hint: 'Sequential number',                                                         },
+      { name: 'Concern ID',                  hint: 'Unique concern identifier',                                                 },
+      { name: 'Concern',                     hint: 'Description of the concern',                                                },
+      { name: 'Type',                        hint: 'WH  |  USV',                                                                },
+      { name: 'Root Cause',                  hint: 'Root cause analysis',                                                       },
+      { name: 'Action Plan',                 hint: 'Corrective action taken / planned',                                         },
+      { name: 'Target Date',                 hint: 'YYYY-MM-DD',                                                                },
+      { name: 'Closure Date',                hint: 'YYYY-MM-DD',                                                                },
+      { name: 'RYG',                         hint: 'R  |  Y  |  G',                                                             },
+      { name: 'Attri.',                      hint: 'M&M Design  |  M&M process  |  Supplier Design  |  Supplier Process  |  Under Analysis' },
+      { name: 'Comm',                        hint: 'Commodity / material name',                                                 },
+      { name: 'Line',                        hint: 'Production line prefix (e.g. T1)',                                          },
+      { name: 'Stage No',                    hint: 'Station ID (e.g. T1-01)',                                                   },
+      { name: 'Z/E',                         hint: 'Z  |  E',                                                                   },
+      { name: 'ATTRIBUTION',                 hint: 'M  |  P  |  D  |  U',                                                      },
+      { name: 'Part',                        hint: 'Part name or number',                                                       },
+      { name: 'Phenomena',                   hint: 'Phenomena / symptom description',                                           },
+      { name: 'Total Incidenes',             hint: 'Total incidences count (auto-sum of monthly columns)',                      },
+      ...ALL_TEMPLATE_MONTHS.map((m) => ({ name: m, hint: `Monthly incidence count for ${m}` })),
+      { name: 'Field defect after cut off',  hint: 'Number of field defects after cut-off date',                                },
+      { name: 'Status (3 Month basis)',      hint: 'R  |  G',                                                                   },
     ],
   },
   'layered-audit': {
     label: 'Layered Audit',
-    filename: 'layered_audit_template.csv',
+    filename: 'layered_audit_template.xlsx',
     desc: 'Layered audit observation records. One row per audit observation.',
     columns: [
-      { name: 'Model',          hint: 'Vehicle model name',                    example: 'XUV700'      },
-      { name: 'Date',           hint: 'YYYY-MM-DD',                            example: '2025-04-01'  },
-      { name: 'Station ID',     hint: 'Station / stage identifier',             example: 'T1-01'       },
-      { name: 'Workstation',    hint: 'Workstation name or code',               example: ''            },
-      { name: 'Auditor',        hint: 'Name of the auditor',                    example: ''            },
-      { name: "NC's",           hint: 'Non-conformance observed',               example: ''            },
-      { name: 'Action Plan',    hint: 'Corrective action taken / planned',      example: ''            },
-      { name: '4M',             hint: 'MAN  |  MATERIAL  |  METHOD  |  MACHINE', example: 'MAN'       },
-      { name: 'Responsibility', hint: 'Responsible person or department',       example: ''            },
-      { name: 'Target Date',    hint: 'YYYY-MM-DD',                            example: ''            },
-      { name: 'Status',         hint: 'Open / Closed / In Progress',            example: 'Open'        },
+      { name: 'Model',          hint: 'Vehicle model name'                      },
+      { name: 'Sr.No',          hint: 'Unique serial / reference number'        },
+      { name: 'Date',           hint: 'YYYY-MM-DD'                              },
+      { name: 'Station ID',     hint: 'Station / stage identifier'              },
+      { name: 'Workstation',    hint: 'Workstation name or code'                },
+      { name: 'Auditor',        hint: 'Name of the auditor'                     },
+      { name: "NC's",           hint: 'Non-conformance observed'                },
+      { name: 'Action Plan',    hint: 'Corrective action taken / planned'       },
+      { name: '4M',             hint: 'MAN  |  MATERIAL  |  METHOD  |  MACHINE' },
+      { name: 'Responsibility', hint: 'Responsible person or department'        },
+      { name: 'Target Date',    hint: 'YYYY-MM-DD'                              },
+      { name: 'Status',         hint: 'Open / Closed / In Progress'             },
     ],
   },
   'audit-adherence': {
     label: 'Audit Adherence',
-    filename: 'audit_adherence_template.csv',
+    filename: 'audit_adherence_template.xlsx',
     desc: 'Audit adherence tracking per stage. One row per audit entry.',
     columns: [
-      { name: 'Stage No',   hint: 'Station / stage identifier', example: 'T1-01'      },
-      { name: 'Stage Name', hint: 'Name of the stage',          example: 'Welding'    },
-      { name: 'Auditor',    hint: 'Name of the auditor',        example: ''           },
-      { name: 'Audit Date', hint: 'YYYY-MM-DD',                 example: '2025-04-15' },
+      { name: 'Stage No',   hint: 'Station / stage identifier' },
+      { name: 'Stage Name', hint: 'Name of the stage'          },
+      { name: 'Auditor',    hint: 'Name of the auditor'        },
+      { name: 'Audit Date', hint: 'YYYY-MM-DD'                 },
     ],
   },
 };
 
-// ── CSV utilities ─────────────────────────────────────────────────────────────
+// ── Template download — serve pre-built xlsx files from /public/templates/ ───
 
-// Download a CSV file to the user's machine
-function downloadCsv(filename, headers, rows) {
-  const esc = (v) => {
-    const s = String(v ?? '');
-    return /[,"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const lines = [headers.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))];
-  const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
+// Maps each template key → the static xlsx file name in /public/templates/
+const TEMPLATE_FILES = {
+  'master':          'master_data_template.xlsx',
+  'layered-audit':   'layered_audit_template.xlsx',
+  'audit-adherence': 'audit_adherence_template.xlsx',
+};
 
-// Download a blank template CSV (headers + hints row + example row)
+// Trigger a browser download of the static xlsx template
 function downloadTemplate(key) {
-  const def = TEMPLATE_DEFS[key];
-  if (!def) return;
-  downloadCsv(
-    def.filename,
-    def.columns.map((c) => c.name),
-    [def.columns.map((c) => c.hint), def.columns.map((c) => c.example)]
-  );
+  const filename = TEMPLATE_FILES[key];
+  if (!filename) return;
+  const a = document.createElement('a');
+  a.href = `${process.env.PUBLIC_URL}/templates/${filename}`;
+  a.download = filename;
+  a.click();
 }
 
 function formatMonthLabel(key) {
@@ -1430,8 +1421,7 @@ export default function InputData({ userId, layouts = [] }) {
                       <tr>
                         <th className="tcol-num">#</th>
                         <th>Column Name</th>
-                        <th>Allowed / Format</th>
-                        <th>Example</th>
+                        <th>Hint / Allowed Values</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1440,9 +1430,6 @@ export default function InputData({ userId, layouts = [] }) {
                           <td className="tcol-num">{i + 1}</td>
                           <td className="tcol-name">{col.name}</td>
                           <td className="tcol-hint">{col.hint}</td>
-                          <td className="tcol-example">
-                            {col.example || <span className="tcol-empty">—</span>}
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1620,7 +1607,7 @@ export default function InputData({ userId, layouts = [] }) {
             <div className="template-modal-body">
               <table className="template-col-table">
                 <thead>
-                  <tr><th>#</th><th>Column Name</th><th>Allowed / Format</th><th>Example</th></tr>
+                  <tr><th>#</th><th>Column Name</th><th>Hint / Allowed Values</th></tr>
                 </thead>
                 <tbody>
                   {(TEMPLATE_DEFS[templatePreviewModal]?.columns || []).map((col, i) => (
@@ -1628,7 +1615,6 @@ export default function InputData({ userId, layouts = [] }) {
                       <td className="tcol-num">{i + 1}</td>
                       <td className="tcol-name">{col.name}</td>
                       <td className="tcol-hint">{col.hint}</td>
-                      <td className="tcol-example">{col.example || <span className="tcol-empty">—</span>}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -70,6 +70,8 @@ Thumbs.db
 *.spec
 *.xls
 *.xlsx
+# Allow official Z-Stage templates in public folder
+!nashik-chatbot-pq/frontend/public/templates/*.xlsx
 csv_output/
 excel_part_labeler_csv/
 thar_csv/
