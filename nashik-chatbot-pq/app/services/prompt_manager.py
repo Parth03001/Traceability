@@ -38,6 +38,10 @@ DEFAULT_PROMPTS = {
         "name": "Part Labeler Dashboard Agent Prompt",
         "content": None,  # Will be loaded from file
     },
+    "qlense_prompt": {
+        "name": "QLense Quality Assistant Prompt",
+        "content": None,  # Will be loaded from file
+    },
 }
 
 
@@ -55,6 +59,8 @@ def _load_default_prompts_from_files():
         DEFAULT_PROMPTS["standards_guidelines_prompt"]["content"] = STANDARDS_GUIDELINES_PROMPT
         from app.prompts.part_labeler_dashboard_prompt import PART_LABELER_DASHBOARD_PROMPT
         DEFAULT_PROMPTS["part_labeler_dashboard_prompt"]["content"] = PART_LABELER_DASHBOARD_PROMPT
+        from app.prompts.qlense_prompt import QLENSE_PROMPT
+        DEFAULT_PROMPTS["qlense_prompt"]["content"] = QLENSE_PROMPT
         logger.debug("Default prompts loaded from files")
     except ImportError as e:
         logger.warning(f"Could not load default prompts from files: {e}")
@@ -353,4 +359,11 @@ def get_part_labeler_dashboard_prompt() -> str:
     """Get the Part Labeler Dashboard agent prompt"""
     manager = get_prompt_manager()
     prompt = manager.get_prompt("part_labeler_dashboard_prompt")
+    return prompt
+
+
+def get_qlense_prompt() -> str:
+    """Get the QLense Quality Assistant agent prompt"""
+    manager = get_prompt_manager()
+    prompt = manager.get_prompt("qlense_prompt")
     return prompt

@@ -23,10 +23,19 @@ class ConversationService:
 
     def __init__(self):
         """Initialize the ConversationService"""
-        from app.connectors.neo4j_connector import Neo4jConnector
         from app.agents.agent_pool import AgentPool
 
-        self.neo4j = Neo4jConnector()
+        # Neo4j is optional — only needed for cypher/analyst agents.
+        # If it's not reachable locally, skip gracefully so that
+        # standards_guidelines, part_labeler_dashboard, and qlense agents
+        # (which only need PostgreSQL + OpenSearch) still work.
+        try:
+            from app.connectors.neo4j_connector import Neo4jConnector
+            self.neo4j = Neo4jConnector()
+        except Exception as e:
+            logger.warning(f"⚠️  Neo4j unavailable — cypher/analyst agents disabled: {e}")
+            self.neo4j = None
+
         self.state_db = StateDBConnector()
         self.chat_manager = ChatManager(self.state_db)
         self.agent_pool = AgentPool(self.neo4j)

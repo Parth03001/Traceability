@@ -45,6 +45,36 @@ class MappingRequest(BaseModel):
     userId: int
     dataSource: Optional[str] = "warranty"
 
+@router.get("/data-status")
+async def get_data_status(userId: int = Query(...)):
+    """Return row counts per data source for the given user (used by QLense modal)."""
+    try:
+        return get_service().get_data_status(userId)
+    except Exception as e:
+        logger.error(f"Data status error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch data status")
+
+@router.post("/qlense-upload")
+async def qlense_auto_upload(
+    file: UploadFile = File(...),
+    userId: int = Query(...),
+    dataSource: str = Query(...),
+):
+    """Upload a file for QLense with server-side auto column mapping (no manual mapping needed)."""
+    try:
+        temp_dir = "temp_uploads"
+        os.makedirs(temp_dir, exist_ok=True)
+        temp_path = os.path.join(temp_dir, f"qlense_{userId}_{dataSource}_{file.filename}")
+        with open(temp_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        count = get_service().process_qlense_auto_upload(temp_path, userId, dataSource)
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        return {"success": True, "count": count, "dataSource": dataSource}
+    except Exception as e:
+        logger.error(f"QLense auto-upload error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/warranty-lookup")
 async def warranty_lookup(
     userId: int = Query(...),

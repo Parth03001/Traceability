@@ -4,7 +4,8 @@ import "./ChatPage.css";
 import Sidebar from "./Sidebar";
 import ChatArea from "./ChatArea";
 import PdfViewerModal from "./PdfViewerModal";
-import { conversationService } from "../services/api";
+import QlenseUploadModal from "./QlenseUploadModal";
+import { conversationService, authService, backend_url } from "../services/api";
 
 function ChatPage() {
   const [searchParams] = useSearchParams();
@@ -13,6 +14,7 @@ function ChatPage() {
   // Map landing-page feature key → backend agent_type
   const getAgentType = (feat) => {
     if (feat === "guideline") return "standards_guidelines";
+    if (feat === "quality-assistant") return "qlense";
     return "analyst";
   };
 
@@ -25,6 +27,9 @@ function ChatPage() {
   const [thinkingSteps, setThinkingSteps] = useState([]);
   const [currentThinkingStep, setCurrentThinkingStep] = useState("");
   
+  // QLense upload modal state
+  const [showQlenseModal, setShowQlenseModal] = useState(false);
+
   // PDF Viewer State
   const [isPdfOpen, setIsPdfOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -56,6 +61,19 @@ function ChatPage() {
   // Sync agentType when the URL feature param changes
   useEffect(() => {
     setAgentType(getAgentType(feature));
+  }, [feature]);
+
+  // For QLense: check if user has any data uploaded; if not, show upload modal
+  useEffect(() => {
+    if (feature !== "quality-assistant") return;
+    const userId = authService.getUserId() || parseInt(sessionStorage.getItem("user_id"), 10) || 1;
+    fetch(`${backend_url}/part-labeler/data-status?userId=${userId}`)
+      .then((r) => r.json())
+      .then((status) => {
+        const totalRows = Object.values(status).reduce((a, b) => a + b, 0);
+        if (totalRows === 0) setShowQlenseModal(true);
+      })
+      .catch(() => {/* silently ignore — allow chat even if check fails */});
   }, [feature]);
 
   // Load conversation history on mount / when agentType changes
@@ -668,8 +686,16 @@ function ChatPage() {
     }
   };
 
+  const userId = authService.getUserId() || parseInt(sessionStorage.getItem("user_id"), 10) || 1;
+
   return (
     <div className="app">
+      {showQlenseModal && (
+        <QlenseUploadModal
+          userId={userId}
+          onComplete={() => setShowQlenseModal(false)}
+        />
+      )}
       <Sidebar
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={handleToggleSidebar}

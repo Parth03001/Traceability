@@ -202,13 +202,14 @@ async def websocket_endpoint(
             "cypher",
             "standards_guidelines",
             "part_labeler_dashboard",
+            "qlense",
         ]:
             await websocket.send_json(
                 {
                     "type": "error",
                     "content": (
                         f"Invalid agent type: {agent_type}. Must be one of: "
-                        "'analyst', 'cypher', 'standards_guidelines', 'part_labeler_dashboard'."
+                        "'analyst', 'cypher', 'standards_guidelines', 'part_labeler_dashboard', 'qlense'."
                     ),
                 }
             )

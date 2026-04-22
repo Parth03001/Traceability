@@ -30,9 +30,12 @@ class AgentPool:
             neo4j_connector: Optional shared Neo4j connector
         """
         if neo4j_connector is None:
-            from app.connectors.neo4j_connector import Neo4jConnector
-
-            neo4j_connector = Neo4jConnector()
+            try:
+                from app.connectors.neo4j_connector import Neo4jConnector
+                neo4j_connector = Neo4jConnector()
+            except Exception as e:
+                logger.warning(f"⚠️  Neo4j unavailable — cypher/analyst agents disabled: {e}")
+                neo4j_connector = None
         self.neo4j = neo4j_connector
         self._active_agents = {}
 
@@ -94,6 +97,14 @@ class AgentPool:
                     thread_id=thread_id,
                     checkpointer=self.checkpointer,
                 )
+            elif agent_type == "qlense":
+                from app.agents.qlense_agent import QLenseAgent
+
+                thread_id = f"conv_{conversation_id}"
+                agent = QLenseAgent(
+                    thread_id=thread_id,
+                    checkpointer=self.checkpointer,
+                )
             else:
                 raise ValueError(f"Unknown agent type: {agent_type}")
 
@@ -134,6 +145,15 @@ class AgentPool:
         from app.agents.standards_guidelines_agent import StandardsGuidelinesAgent
 
         return StandardsGuidelinesAgent(
+            thread_id=thread_id,
+            checkpointer=self.checkpointer,
+        )
+
+    def get_qlense_agent(self, thread_id: str = "default"):
+        """Get a standalone QLense agent instance."""
+        from app.agents.qlense_agent import QLenseAgent
+
+        return QLenseAgent(
             thread_id=thread_id,
             checkpointer=self.checkpointer,
         )

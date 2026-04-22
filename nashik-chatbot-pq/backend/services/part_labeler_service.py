@@ -894,3 +894,156 @@ class PartLabelerService:
         except Exception as e:
             logger.error(f"Global error fetching dashboard data: {e}")
             return result
+
+    # =====================================================
+    # QLENSE METHODS
+    # =====================================================
+
+    def get_data_status(self, user_id: int) -> dict:
+        """Return row counts per data source for the given user."""
+        sources = {
+            "warranty": "SELECT COUNT(*) FROM raw_warranty_data WHERE user_id = :uid",
+            "rpt":      "SELECT COUNT(*) FROM raw_rpt_data WHERE user_id = :uid",
+            "gnovac":   "SELECT COUNT(*) FROM raw_gnovac_data WHERE user_id = :uid",
+            "rfi":      "SELECT COUNT(*) FROM raw_rfi_data WHERE user_id = :uid",
+            "esqa":     "SELECT COUNT(*) FROM raw_esqa_data WHERE user_id = :uid",
+        }
+        result = {}
+        for source, sql in sources.items():
+            try:
+                rows = self.db.execute_query(sql, {"uid": user_id})
+                result[source] = rows[0][0] if rows else 0
+            except Exception:
+                result[source] = 0
+        return result
+
+    # Auto-mapping tables: { db_col: [possible excel headers (lowercased, stripped)] }
+    _WARRANTY_MAP = {
+        "region": ["region"], "zone": ["zone"], "area_office": ["area office"],
+        "plant": ["plant"], "plant_desc": ["plantdesc", "plant desc"],
+        "commodity": ["commodity"], "group_code": ["group code"],
+        "group_code_desc": ["group code desc"], "complaint_code": ["complaint code"],
+        "complaint_code_desc": ["complaint code desc"], "base_model": ["base model"],
+        "model_code": ["model code"], "model_family": ["model family"],
+        "claim_type": ["claim type"], "sap_claim_no": ["sap claim no"],
+        "claim_desc": ["claim desc"], "ac_non_ac": ["ac / non ac", "ac/non ac"],
+        "variant": ["variant"], "drive_type": ["drive type"],
+        "service_type": ["service type"], "billing_dealer": ["billing dealer"],
+        "billing_dealer_name": ["billing dealer name"], "serial_no": ["serial no"],
+        "claim_date": ["claim date"], "failure_kms": ["failure kms"],
+        "km_hr_group": ["kmhrgroup", "km hr group"], "dealer_verbatim": ["dealer verbatim"],
+        "part": ["part"], "vender": ["vender", "vendor"],
+        "material_description": ["material description"],
+        "causal_flag": ["causal flag"], "jdp_city": ["jdp city"],
+        "fisyr_qrt": ["fisyr qrt"], "engine_number": ["engine number"],
+        "manufac_yr_mon": ["manufac_yr_mon", "manufac yr mon"],
+        "failure_date": ["failure date"], "mis_bucket": ["mis_bucket", "mis bucket"],
+        "walk_home": ["walk home"], "dealer_code": ["dealer code"],
+        "claim_dealer_name": ["claim dealer name"], "ro_number": ["ronumber", "ro number"],
+        "no_of_incidents": ["no. of incidents", "no of incidents"],
+        "new_manufacturing_quater": ["new manufacturing quater", "new manufacturing quarter"],
+        "vendor_manuf": ["vendor/manuf.", "vendor manuf"],
+    }
+    _RPT_MAP = {
+        "date_col": ["date"], "shift": ["shift"], "body_sr_no": ["bodysrno", "body sr no"],
+        "vin_number": ["vin_number", "vin number"], "buyoff_stage": ["buyoff stage"],
+        "model": ["model"], "platform_group": ["platform group"],
+        "stage_name": ["stage name"], "part": ["part"],
+        "defect": ["defect"], "part_defect": ["partdefect", "part defect"],
+        "attribute_name": ["attribute_name", "attribute name"],
+        "custom_attribution": ["custom attribution"],
+        "offline_val": ["_offline", "offline"], "online_val": ["_online", "online"],
+        "rework_status": ["rework_status", "rework status"],
+        "location_name": ["location_name", "location name"],
+        "defect_status": ["defect_status", "defect status"],
+        "as_is_ok": ["as_is_ok", "as is ok"], "shop_name": ["shop_name", "shop name"],
+        "model_description": ["model_description", "model description"],
+        "model_code": ["modelcode", "model code"],
+        "severity_name": ["severity name"], "domestic_export": ["domestic/export"],
+        "defect_category": ["defect_category", "defect category"],
+    }
+    _GNOVAC_MAP = {
+        "vin_no": ["vin no"], "audit_date": ["audit date"], "plant_name": ["plant name"],
+        "model_code": ["model code"], "variant_name": ["variant name"],
+        "fuel_type": ["fuel type"], "build_phase_name": ["buildphase name", "build phase name"],
+        "body_no": ["body no"], "part_name": ["part name"], "defect_name": ["defect name"],
+        "location_name": ["location name"], "concern_type_name": ["concern type name"],
+        "pointer": ["pointer"], "attribution": ["attribution"],
+        "four_m": ["4m"], "four_m_analysis_name": ["4m analysis name"],
+        "root_cause": ["root cause"], "ica": ["ica"], "pca": ["pca"],
+        "responsibility": ["responsibility"], "target_date": ["target date"],
+        "status": ["status"], "frequency": ["frequency"],
+        "new_and_repeat": ["new and repeat"], "remark": ["remark"],
+    }
+    _RFI_MAP = {
+        "date_col": ["date"], "plant_name": ["plant name"], "vin_no": ["vin no"],
+        "biw_no": ["biw no"], "model_name": ["model name"], "variant": ["variant"],
+        "fuel": ["fuel"], "drive_name": ["drive name"],
+        "build_phase_name": ["build phase name"],
+        "software_v_name": ["softwarev name", "software v name"],
+        "color_name": ["color name"], "country_name": ["country name"],
+        "area_name": ["area name"], "part_name": ["part name"],
+        "defect_name": ["defect name"], "location_name": ["location name"],
+        "defect_type_name": ["defecttype name", "defect type name"],
+        "severity_name": ["severity name"], "attribution_name": ["attribution name"],
+        "stage_name": ["stage name"], "root_cause": ["root cause"],
+        "ica": ["ica"], "pca": ["pca"], "target_date": ["target date"],
+        "responsibility": ["responsibility"], "status": ["status"],
+        "category_name": ["category name"], "analysis_name": ["analysis name"],
+        "action_plan_status": ["action plan status"], "frequency": ["frequency"],
+    }
+    _ESQA_MAP = {
+        "concern_number": ["concern number"], "concern_report_date": ["concern report date"],
+        "pu_name": ["pu name"], "concern_source": ["concern source"],
+        "part_no": ["part no"], "part_name": ["part name"],
+        "vendor_code": ["vendor code"], "vendor_name": ["vendor name"],
+        "concern_description": ["concern description"],
+        "vehicle_model": ["vehicle model"], "vehicle_variant": ["vehicle variant"],
+        "concern_repeat": ["concern repeat"],
+        "concern_category": ["concern catergory", "concern category"],
+        "concern_severity": ["concern severity"], "qty_reported": ["qty. reported", "qty reported"],
+        "commodity": ["commodity"], "concern_attribution": ["concern attribution"],
+        "initial_analysis": ["initial analysis & reason for attributio", "initial analysis"],
+        "sqa_officer": ["sqa officer"], "ica_possible": ["ica possible"],
+        "reason_ica_not_possible": ["reason for ica not possible"],
+        "ica_details": ["ica details at m&m", "ica details"],
+        "ica_failure": ["ica failure"], "segregation_qty": ["segregation qty"],
+        "ok_qty": ["ok qty"], "rejection_qty": ["rejection(block)qty", "rejection qty"],
+        "scrap_qty": ["scarp qty", "scrap qty"], "rework_qty": ["rework qty"],
+        "deviation_qty": ["deviation qty"], "line_loss": ["line loss"],
+        "yard_hold": ["yard hold"], "esqa_entry_required": ["esqa entry required"],
+        "justification_esqa": ["justification for esqa not required"],
+        "esqa_number": ["esqa number"], "esqa_posting_date": ["esqa posting date"],
+    }
+
+    def _auto_map(self, headers: list, source_map: dict) -> dict:
+        """Build column mapping by normalizing headers against known aliases."""
+        normalized = {h.lower().strip(): h for h in headers}
+        mapping = {}
+        for db_col, aliases in source_map.items():
+            for alias in aliases:
+                if alias in normalized:
+                    mapping[db_col] = normalized[alias]
+                    break
+        return mapping
+
+    def process_qlense_auto_upload(self, file_path: str, user_id: int, data_source: str) -> int:
+        """Upload a file for QLense using auto-detected column mapping."""
+        import pandas as pd
+        df_head = pd.read_csv(file_path, nrows=0) if file_path.endswith('.csv') else pd.read_excel(file_path, nrows=0)
+        headers = df_head.columns.tolist()
+
+        source_maps = {
+            "warranty": self._WARRANTY_MAP,
+            "rpt":      self._RPT_MAP,
+            "gnovac":   self._GNOVAC_MAP,
+            "rfi":      self._RFI_MAP,
+            "esqa":     self._ESQA_MAP,
+        }
+        smap = source_maps.get(data_source, self._WARRANTY_MAP)
+        mapping = self._auto_map(headers, smap)
+
+        if not mapping:
+            raise ValueError(f"Could not auto-map any columns for source '{data_source}'. Check file format.")
+
+        return self.process_data_for_source(file_path, mapping, user_id, data_source)
