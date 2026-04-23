@@ -1,0 +1,443 @@
+/* ════════════════════════════════════════════════════
+   Admin Panel  —  Crimson Red & White theme
+   Matches the LandingPage feature-card aesthetic
+   ════════════════════════════════════════════════════ */
+
+:root {
+  --crimson:      #DC143C;
+  --crimson-dark: #B8102E;
+  --crimson-soft: rgba(220, 20, 60, 0.08);
+  --crimson-mid:  rgba(220, 20, 60, 0.15);
+  --border:       #E5E5E5;
+  --text-main:    #1a1a1a;
+  --text-muted:   #666;
+  --text-light:   #999;
+  --bg-page:      #f5f5f5;
+  --bg-card:      #ffffff;
+}
+
+/* ── Page ─────────────────────────────────────────── */
+.admin-panel {
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--bg-page);
+  color: var(--text-main);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header bar ───────────────────────────────────── */
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: var(--bg-card);
+  border-bottom: 3px solid var(--crimson);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.admin-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.admin-nav-logo {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+}
+
+.back-btn {
+  background: transparent;
+  border: 1px solid var(--crimson);
+  color: var(--crimson);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+.back-btn:hover {
+  background: var(--crimson);
+  color: #fff;
+}
+
+.admin-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--crimson);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.admin-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ── Main body ────────────────────────────────────── */
+.admin-body {
+  flex: 1;
+  padding: 16px 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ── Alerts ───────────────────────────────────────── */
+.admin-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  border-left: 4px solid;
+}
+.admin-alert-error {
+  background: #fff5f7;
+  border-left-color: var(--crimson);
+  color: var(--crimson-dark);
+  border: 1px solid rgba(220,20,60,0.25);
+  border-left: 4px solid var(--crimson);
+}
+.admin-alert-success {
+  background: #f0fdf4;
+  border-left: 4px solid #16a34a;
+  color: #166534;
+  border: 1px solid rgba(22,163,74,0.2);
+  border-left: 4px solid #16a34a;
+}
+.alert-close {
+  font-size: 0.8rem;
+  opacity: 0.6;
+  margin-left: 12px;
+}
+
+/* ── Stats bar ────────────────────────────────────── */
+.admin-stats {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.stat-chip {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--crimson);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.stat-num {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--crimson);
+  margin-right: 5px;
+}
+
+/* ── Table wrapper ────────────────────────────────── */
+.admin-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+/* Table head */
+.admin-table thead tr {
+  background: var(--crimson);
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+/* Table body */
+.admin-table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.admin-table tbody tr:hover {
+  background: var(--crimson-soft);
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Self row (logged-in admin) */
+.row-self td {
+  background: #fff5f7;
+}
+.row-self:hover td {
+  background: #ffe8ed !important;
+}
+
+/* Column helpers */
+.td-num      { color: var(--text-light); width: 40px; text-align: center; }
+.td-username { font-weight: 600; color: var(--text-main); }
+.td-email    { color: var(--text-muted); font-size: 0.82rem; }
+.td-date     { color: var(--text-light); font-size: 0.81rem; white-space: nowrap; }
+
+/* ── Role badges ──────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.badge-admin {
+  background: var(--crimson);
+  color: #fff;
+}
+.badge-user {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+.badge-pl {
+  background: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+/* ── Actions column ───────────────────────────────── */
+.td-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.role-select {
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.role-select:hover:not(:disabled) {
+  border-color: var(--crimson);
+}
+.role-select:focus {
+  border-color: var(--crimson);
+  box-shadow: 0 0 0 2px rgba(220,20,60,0.12);
+}
+.role-select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #f9f9f9;
+}
+
+.delete-btn {
+  background: #fff;
+  border: 1px solid rgba(220,20,60,0.4);
+  color: var(--crimson);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.delete-btn:hover:not(:disabled) {
+  background: var(--crimson);
+  color: #fff;
+  border-color: var(--crimson);
+}
+.delete-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── Loading state ────────────────────────────────── */
+.admin-loading {
+  padding: 48px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* ── Delete confirmation modal ────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--crimson);
+  border-radius: 12px;
+  padding: 28px 32px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.modal-box h2 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+  color: var(--crimson);
+  font-weight: 700;
+}
+
+.modal-box p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0 0 24px;
+  line-height: 1.6;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-cancel {
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 7px;
+  padding: 8px 22px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.modal-cancel:hover {
+  background: #f5f5f5;
+  color: var(--text-main);
+}
+
+.modal-confirm {
+  background: var(--crimson);
+  border: 1px solid var(--crimson);
+  color: #fff;
+  border-radius: 7px;
+  padding: 8px 22px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.modal-confirm:hover {
+  background: var(--crimson-dark);
+}
+
+/* ── Header right group ───────────────────────────── */
+.admin-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── Add User button ──────────────────────────────── */
+.add-user-btn {
+  background: var(--crimson);
+  border: none;
+  color: #fff;
+  border-radius: 7px;
+  padding: 8px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.add-user-btn:hover {
+  background: var(--crimson-dark);
+}
+
+/* ── Add User modal form ──────────────────────────── */
+.modal-box-form {
+  max-width: 520px;
+}
+
+.add-user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-row {
+  display: flex;
+  gap: 14px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 5px;
+}
+
+.form-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form-field input,
+.form-field select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 0.88rem;
+  color: var(--text-main);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  border-color: var(--crimson);
+  box-shadow: 0 0 0 2px rgba(220,20,60,0.1);
+}
+
+.form-field input::placeholder {
+  color: var(--text-light);
+}

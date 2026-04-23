@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { MoreVertical } from "lucide-react";
 import "./Sidebar.css";
 import { authService } from "../services/api";
 
@@ -111,7 +112,7 @@ const Sidebar = ({
                   className="chat-options"
                   onClick={(e) => toggleOptionsMenu(e, chat.id)}
                 >
-                  &ctdot;
+                  <MoreVertical size={16} />
                 </button>
                 {showOptionsMenu === chat.id && (
                   <div className="options-menu" ref={optionsMenuRef}>

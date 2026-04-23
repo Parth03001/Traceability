@@ -103,6 +103,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  overflow-x: hidden;
 }
 
 .message-bubble {
@@ -153,6 +154,9 @@
   -webkit-transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  /* Prevent horizontal overflow during streaming */
+  width: 100%;
+  overflow-x: hidden;
 }
 
 /* Stabilize message bubble during streaming to prevent flickering */
@@ -496,6 +500,8 @@
 /* Markdown Response Styling */
 .bot-message-markdown {
   width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -590,16 +596,23 @@
 }
 
 /* Table Styling */
+.bot-message-markdown .table-scroll-wrapper {
+  overflow-x: auto;
+  width: 100%;
+  margin: 12px 0;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 .bot-message-markdown table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
   background-color: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border-radius: 4px;
   overflow: hidden;
   table-layout: auto;
-  margin: 12px 0;
+  margin: 0;
 }
 
 .bot-message-markdown thead {

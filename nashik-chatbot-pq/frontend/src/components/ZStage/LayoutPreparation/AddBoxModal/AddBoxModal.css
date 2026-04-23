@@ -1,0 +1,362 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-panel {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: var(--popup-shadow);
+  width: 420px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--mahindra-red);
+  border-radius: 8px 8px 0 0;
+}
+
+.modal-title {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.modal-close-btn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.modal-form {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.modal-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.modal-input {
+  padding: 9px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 14px;
+  color: var(--text-dark);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.modal-input:focus {
+  border-color: var(--mahindra-red);
+  box-shadow: 0 0 0 3px rgba(220, 20, 60, 0.2);
+}
+
+.modal-input--error {
+  border-color: #e53e3e;
+}
+
+.modal-error {
+  font-size: 11px;
+  color: #e53e3e;
+}
+
+.modal-hint {
+  font-size: 11px;
+  color: var(--text-gray);
+  font-style: italic;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.modal-btn {
+  padding: 9px 20px;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.15s;
+}
+
+.modal-btn--cancel {
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+}
+
+.modal-btn--cancel:hover {
+  background-color: var(--border-color);
+}
+
+.modal-btn--add {
+  background-color: var(--mahindra-red);
+  color: #ffffff;
+}
+
+.modal-btn--add:hover {
+  background-color: var(--mahindra-red-dark);
+}
+
+/* Mode toggle — supports 2 or 3 tabs */
+.modal-mode-toggle {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.modal-mode-btn {
+  flex: 1;
+  padding: 7px 0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  border-right: 1px solid var(--border-color);
+  background-color: var(--bg-light);
+  color: var(--text-gray);
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.modal-mode-btn:last-child {
+  border-right: none;
+}
+
+.modal-mode-btn--active {
+  background-color: var(--mahindra-red);
+  color: #ffffff;
+}
+
+/* Range inputs row */
+.modal-range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-range-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-range-sep {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-gray);
+  flex-shrink: 0;
+}
+
+/* Label hint */
+.modal-label-hint {
+  font-weight: 400;
+  color: var(--text-gray);
+  font-size: 11px;
+}
+
+/* Inline field (label + control on same row) */
+.modal-field--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ON/OFF toggle button for reverse order */
+.modal-toggle-btn {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 2px solid var(--border-color);
+  background-color: var(--bg-light);
+  color: var(--text-gray);
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  min-width: 44px;
+}
+
+.modal-toggle-btn--on {
+  background-color: var(--mahindra-red);
+  border-color: var(--mahindra-red);
+  color: #ffffff;
+}
+
+/* Textarea for custom IDs */
+.modal-textarea {
+  padding: 9px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  color: var(--text-dark);
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  line-height: 1.6;
+}
+
+.modal-textarea:focus {
+  border-color: var(--mahindra-red);
+  box-shadow: 0 0 0 3px rgba(220, 20, 60, 0.2);
+}
+
+/* ID preview chips */
+.modal-id-preview {
+  background-color: var(--bg-light);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-id-preview-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-gray);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.modal-id-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.modal-id-chip {
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  padding: 2px 6px;
+  background-color: rgba(220, 20, 60, 0.05);
+  color: var(--mahindra-red);
+  border: 1px solid rgba(220, 20, 60, 0.2);
+  border-radius: 3px;
+}
+
+.modal-id-chip--more {
+  background-color: var(--border-color);
+  color: var(--text-gray);
+  border-color: var(--border-color);
+}
+
+/* Station values table */
+.modal-station-table-wrap {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background-color: var(--bg-light);
+}
+
+.modal-station-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.modal-st-head {
+  position: sticky;
+  top: 0;
+  padding: 5px 4px;
+  background-color: var(--mahindra-red);
+  color: #ffffff;
+  font-weight: 700;
+  text-align: center;
+  border-right: 1px solid var(--mahindra-red-dark);
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.modal-st-head--id {
+  text-align: left;
+  padding-left: 8px;
+  min-width: 80px;
+}
+
+.modal-st-head:last-child {
+  border-right: none;
+}
+
+.modal-station-table tbody tr:nth-child(even) {
+  background-color: var(--bg-light);
+}
+
+.modal-station-table tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.modal-st-id {
+  font-family: 'Courier New', monospace;
+  color: var(--mahindra-red);
+  padding: 3px 4px 3px 8px;
+  border-right: 1px solid var(--border-color);
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.modal-st-cell {
+  padding: 2px 3px;
+  border-right: 1px solid var(--border-color);
+}
+
+.modal-st-cell:last-child {
+  border-right: none;
+}
+
+.modal-st-input {
+  width: 100%;
+  padding: 3px 5px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--text-dark);
+  outline: none;
+  background: #ffffff;
+  box-sizing: border-box;
+  min-width: 40px;
+  transition: border-color 0.15s;
+}
+
+.modal-st-input:focus {
+  border-color: var(--mahindra-red);
+  box-shadow: 0 0 0 2px rgba(220, 20, 60, 0.12);
+}

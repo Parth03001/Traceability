@@ -108,6 +108,103 @@ class StateDBManager:
             logger.error(f"Error creating tables: {e}")
             raise
 
+    def run_migrations(self):
+        """
+        Apply incremental schema migrations (idempotent).
+        Run after create_tables_if_not_exists.
+        """
+        try:
+            # Use a regular (non-AUTOCOMMIT) engine so we can commit explicitly.
+            # _get_engine() uses AUTOCOMMIT which does not allow conn.commit().
+            settings = self.settings
+            url = (
+                f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
+                f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}"
+                f"/{settings.POSTGRES_DB}?client_encoding=utf8"
+            )
+            from sqlalchemy import create_engine as _ce
+            engine = _ce(url)
+            with engine.connect() as conn:
+                # ── Migrate bypass_icons → buyoff_icons ─────────────────────
+                # create_all() may have already created an empty buyoff_icons,
+                # so we copy any existing data then drop the old table.
+                conn.execute(text("""
+                    DO $$ BEGIN
+                        IF EXISTS (
+                            SELECT FROM pg_tables
+                            WHERE schemaname = 'public' AND tablename = 'bypass_icons'
+                        ) THEN
+                            IF EXISTS (
+                                SELECT FROM pg_tables
+                                WHERE schemaname = 'public' AND tablename = 'buyoff_icons'
+                            ) THEN
+                                -- Both tables exist: copy old data (preserve IDs) then drop old
+                                INSERT INTO buyoff_icons
+                                    (id, layout_id, position_x, position_y, created_at)
+                                OVERRIDING SYSTEM VALUE
+                                SELECT id, layout_id, position_x, position_y, created_at
+                                FROM bypass_icons
+                                ON CONFLICT (id) DO NOTHING;
+                                DROP TABLE bypass_icons CASCADE;
+                            ELSE
+                                -- Only old table exists: simple rename
+                                ALTER TABLE bypass_icons RENAME TO buyoff_icons;
+                            END IF;
+                        END IF;
+                    END $$;
+                """))
+
+                # ── Rename FK columns in box_connections ────────────────────
+                conn.execute(text("""
+                    DO $$ BEGIN
+                        IF EXISTS (
+                            SELECT FROM information_schema.columns
+                            WHERE table_name = 'box_connections'
+                              AND column_name = 'from_bypass_id'
+                        ) THEN
+                            ALTER TABLE box_connections
+                                RENAME COLUMN from_bypass_id TO from_buyoff_id;
+                        END IF;
+                    END $$;
+                """))
+                conn.execute(text("""
+                    DO $$ BEGIN
+                        IF EXISTS (
+                            SELECT FROM information_schema.columns
+                            WHERE table_name = 'box_connections'
+                              AND column_name = 'to_bypass_id'
+                        ) THEN
+                            ALTER TABLE box_connections
+                                RENAME COLUMN to_bypass_id TO to_buyoff_id;
+                        END IF;
+                    END $$;
+                """))
+
+                # ── Add user_id to layouts ───────────────────────────────────
+                conn.execute(text(
+                    "ALTER TABLE layouts "
+                    "ADD COLUMN IF NOT EXISTS user_id INTEGER;"
+                ))
+
+                # ── Add user_id and layout_id to input_records ───────────────
+                conn.execute(text(
+                    "ALTER TABLE input_records "
+                    "ADD COLUMN IF NOT EXISTS user_id INTEGER;"
+                ))
+                conn.execute(text(
+                    "ALTER TABLE input_records "
+                    "ADD COLUMN IF NOT EXISTS layout_id INTEGER "
+                    "REFERENCES layouts(id) ON DELETE SET NULL;"
+                ))
+
+                conn.commit()
+
+            engine.dispose()
+            logger.info("Migrations completed successfully")
+        except Exception as e:
+            logger.error(f"Error running migrations: {e}")
+            raise
+
     def drop_all_tables(self):
         """
         Drop all tables (USE WITH CAUTION)

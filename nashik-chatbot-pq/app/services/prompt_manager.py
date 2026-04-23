@@ -34,6 +34,10 @@ DEFAULT_PROMPTS = {
         "name": "Standards & Guidelines Agent Prompt",
         "content": None,  # Will be loaded from file
     },
+    "part_labeler_dashboard_prompt": {
+        "name": "Part Labeler Dashboard Agent Prompt",
+        "content": None,  # Will be loaded from file
+    },
 }
 
 
@@ -49,6 +53,8 @@ def _load_default_prompts_from_files():
         DEFAULT_PROMPTS["cypher_agent_prompt"]["content"] = CYPHER_AGENT_PROMPT
         DEFAULT_PROMPTS["todo_list_middleware_prompt"]["content"] = TODO_LIST_MIDDLEWARE_PROMPT
         DEFAULT_PROMPTS["standards_guidelines_prompt"]["content"] = STANDARDS_GUIDELINES_PROMPT
+        from app.prompts.part_labeler_dashboard_prompt import PART_LABELER_DASHBOARD_PROMPT
+        DEFAULT_PROMPTS["part_labeler_dashboard_prompt"]["content"] = PART_LABELER_DASHBOARD_PROMPT
         logger.debug("Default prompts loaded from files")
     except ImportError as e:
         logger.warning(f"Could not load default prompts from files: {e}")
@@ -340,4 +346,11 @@ def get_standards_guidelines_prompt() -> str:
     """Get the Standards & Guidelines agent prompt"""
     manager = get_prompt_manager()
     prompt = manager.get_prompt("standards_guidelines_prompt")
+    return prompt
+
+
+def get_part_labeler_dashboard_prompt() -> str:
+    """Get the Part Labeler Dashboard agent prompt"""
+    manager = get_prompt_manager()
+    prompt = manager.get_prompt("part_labeler_dashboard_prompt")
     return prompt

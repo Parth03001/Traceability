@@ -121,7 +121,7 @@ class ChatManager:
                         "response": (
                             json.loads(row[2]) if isinstance(row[2], str) else row[2]
                         ),
-                        "timestamp": row[3].isoformat() if row[3] else None,
+                        "chat_entry_ts": row[3].isoformat() if row[3] else None,
                         "clarification_needed": row[4],
                     }
                 )

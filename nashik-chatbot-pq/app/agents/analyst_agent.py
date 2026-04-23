@@ -285,6 +285,7 @@ class AnalystAgent:
             # Track streaming state
             just_finished_thinking = False
             response_started = False
+            thinking_step_count = 0
 
             # Stream with multiple modes to capture all events
             for stream_mode, chunk in self.agent.stream(
@@ -306,6 +307,7 @@ class AnalystAgent:
                         step_name = step_name_map.get(node_name, node_name)
 
                         just_finished_thinking = True
+                        thinking_step_count += 1
 
                         yield {
                             "type": "thinking",
@@ -358,6 +360,7 @@ class AnalystAgent:
                                                         flush=True,
                                                     )
                                                     sys.stdout.flush()
+                                                    thinking_step_count += 1
                                                     # Emit thinking event for web UI
                                                     thinking_event = {
                                                         "type": "thinking",
@@ -526,14 +529,19 @@ class AnalystAgent:
 
                             # Handle response nodes - emit final answer tokens
                             if current_node in RESPONSE_NODES:
-                                # Add small delay between thinking and response
-                                if not response_started and just_finished_thinking:
-                                    import time
-
-                                    time.sleep(0.3)
+                                if not response_started:
+                                    # Add small delay between thinking and response
+                                    if just_finished_thinking:
+                                        import time
+                                        time.sleep(0.3)
                                     just_finished_thinking = False
-
-                                response_started = True
+                                    response_started = True
+                                    yield {
+                                        "type": "progress",
+                                        "stage": "generating",
+                                        "step_count": thinking_step_count,
+                                        "detail": "Generating response…",
+                                    }
 
                                 # Collect response text for chart title extraction
                                 full_response_text.append(token_content)

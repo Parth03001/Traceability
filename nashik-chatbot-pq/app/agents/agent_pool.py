@@ -86,6 +86,14 @@ class AgentPool:
                     thread_id=thread_id,
                     checkpointer=self.checkpointer,
                 )
+            elif agent_type == "part_labeler_dashboard":
+                from app.agents.part_labeler_dashboard_agent import PartLabelerDashboardAgent
+
+                thread_id = f"conv_{conversation_id}"
+                agent = PartLabelerDashboardAgent(
+                    thread_id=thread_id,
+                    checkpointer=self.checkpointer,
+                )
             else:
                 raise ValueError(f"Unknown agent type: {agent_type}")
 

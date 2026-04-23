@@ -1,0 +1,38 @@
+.zstage-app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+.zstage-app-main {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.zstage-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #E5E5E5;
+  flex-shrink: 0;
+  height: 52px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.zstage-header-logo-left {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+}
+
+.zstage-header-logo-right {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+}

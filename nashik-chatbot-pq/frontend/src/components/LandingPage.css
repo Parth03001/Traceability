@@ -6,30 +6,65 @@
   background-position: center;
   background-repeat: no-repeat;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  position: relative;
+  flex-direction: column;
+  align-items: stretch;
   overflow: hidden;
 }
 
-/* Corner Logos */
-.corner-logo {
-  position: absolute;
-  top: 1.5rem;
-  height: 45px;
+/* ── Top Navbar ── */
+.landing-navbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 2rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  z-index: 20;
+  animation: fadeIn 0.8s ease;
+}
+
+.navbar-left,
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 160px;
+}
+
+.navbar-right {
+  justify-content: flex-end;
+}
+
+.navbar-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navbar-logo {
+  height: 40px;
   width: auto;
   object-fit: contain;
-  z-index: 10;
   animation: fadeIn 1s ease;
 }
 
-.corner-logo-left {
-  left: 2rem;
+.navbar-welcome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: #1a1a1a;
 }
 
-.corner-logo-right {
-  right: 2rem;
+/* Legacy corner-logo kept for any other usage */
+.corner-logo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
 }
 
 @keyframes fadeIn {
@@ -42,23 +77,27 @@
 }
 
 .landing-content {
+  flex: 1;
   width: 100%;
-  max-width: 1400px;
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 2.5rem;
+  justify-content: flex-end;
+  padding: 1.5rem 1.5rem 1.5rem 0;
 }
 
-/* Left Section - AI Text */
+/* Left Section - AI Text — floats over background, doesn't push cards */
 .left-section {
-  flex: 1;
+  position: absolute;
+  left: 7rem;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  padding: 2rem;
-  padding-left: 3rem;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* AI Solution Text Section */
@@ -116,69 +155,107 @@
     opacity: 0;
 }
 
-/* Right Section - Features Container */
+/* Right Section - Features Grid — anchored to right edge */
 .features-container {
-  flex: 1;
-  max-width: 500px;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
+  flex: 0 0 auto;
+  width: 675px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+  padding: 0.75rem;
+  align-content: start;
+  z-index: 2;
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
 }
 
-/* Feature List Items */
+/* Single-column override — for users with ≤ 4 visible features (e.g. part_labeler) */
+.features-container.features-single-col {
+  grid-template-columns: 1fr;
+  width: 675px;
+}
+
+.features-container.features-single-col .get-started-btn {
+  align-self: flex-end;
+  width: auto;
+  padding: 0.25rem 1.1rem;
+  font-size: 0.72rem;
+}
+
+.features-container.features-single-col .feature-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.features-container.features-single-col .feature-title {
+  font-size: 1rem;
+}
+
+.features-container.features-single-col .feature-description {
+  font-size: 0.82rem;
+}
+
+/* Feature Grid Cards */
 .feature-card {
   background: #FFFFFF;
   border-left: 4px solid #DC143C;
   border-radius: 8px;
-  padding: 0.5rem 1rem;
+  padding: 0.65rem 0.85rem;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  transition: all 0.3s ease;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  transition: all 0.25s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1px solid #E5E5E5;
   border-left: 4px solid #DC143C;
   cursor: pointer;
+  min-height: 100px;
 }
 
 .feature-card:hover {
-  transform: translateX(8px);
-  box-shadow: 0 4px 16px rgba(220, 20, 60, 0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(220, 20, 60, 0.15);
   border-left-color: #B8102E;
 }
 
 .feature-content {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  flex: 1;
+  gap: 0.55rem;
+  width: 100%;
 }
 
 .feature-icon {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .feature-info {
   flex: 1;
+  min-width: 0;
 }
 
 .feature-title {
-  font-size: 1.05rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: #1a1a1a;
-  margin: 0 0 0.15rem 0;
+  margin: 0 0 0.1rem 0;
   line-height: 1.3;
+  white-space: normal;
 }
 
 .feature-description {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: #666666;
   margin: 0;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Get Started Button */
@@ -186,33 +263,39 @@
   background: #DC143C;
   color: #ffffff;
   border: none;
-  border-radius: 20px;
-  padding: 0.5rem 1.25rem;
-  font-size: 0.85rem;
+  border-radius: 14px;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(220, 20, 60, 0.3);
-  flex-shrink: 0;
+  gap: 0.3rem;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(220, 20, 60, 0.25);
+  align-self: stretch;
+  justify-content: center;
+  margin-top: auto;
 }
 
 .get-started-btn:hover {
   background: #B8102E;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(220, 20, 60, 0.5);
+  box-shadow: 0 4px 10px rgba(220, 20, 60, 0.4);
+}
+
+.get-started-btn:disabled {
+  background: #ccc;
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
 .arrow-icon {
-  font-size: 1rem;
-  transition: transform 0.3s ease;
-  font-weight: 400;
+  font-size: 0.9rem;
+  transition: transform 0.25s ease;
 }
 
-.get-started-btn:hover .arrow-icon {
-  transform: translateX(4px);
+.get-started-btn:hover:not(:disabled) .arrow-icon {
+  transform: translateX(3px);
 }
 
 /* Animations */
@@ -289,20 +372,21 @@
    Auth Form Styles
    ===================================================== */
 .auth-container {
-  flex: 1;
-  max-width: 420px;
+  flex: 0 0 auto;
+  width: 630px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
   animation: fadeInUp 0.6s ease-out;
+  z-index: 2;
 }
 
 .auth-card {
   width: 100%;
   background: #ffffff;
   border-radius: 12px;
-  padding: 2rem 2rem 1.5rem;
+  padding: 2rem 2.5rem 1.75rem;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
   border-top: 4px solid #DC143C;
 }
@@ -359,8 +443,11 @@
 }
 
 .auth-submit-btn {
-  width: 100%;
-  padding: 0.7rem;
+  width: auto;
+  min-width: 180px;
+  padding: 0.7rem 2rem;
+  display: block;
+  margin-left: auto;
   background: #DC143C;
   color: #fff;
   border: none;
@@ -379,6 +466,36 @@
 .auth-submit-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.auth-success {
+  background: #f0fff4;
+  color: #1a7f3c;
+  border: 1px solid #b7ebc8;
+  border-radius: 6px;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.82rem;
+  margin-bottom: 1rem;
+}
+
+.auth-forgot {
+  text-align: center;
+  margin-top: 0.6rem;
+}
+
+.auth-forgot-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.auth-forgot-btn:hover {
+  color: #DC143C;
+  text-decoration: underline;
 }
 
 .auth-toggle {
@@ -460,14 +577,12 @@
 /* Responsive Design */
 @media (max-width: 1024px) {
   .landing-content {
-    flex-direction: column;
-    gap: 2rem;
+    justify-content: center;
+    padding: 1rem;
   }
 
   .left-section {
-    width: 100%;
-    max-width: 500px;
-    padding-left: 2rem;
+    display: none;
   }
 
   .ai-solution-text {
@@ -485,26 +600,22 @@
 
   .features-container {
     width: 100%;
-    max-width: 650px;
+    max-width: 580px;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
-  .landing-page {
-    padding: 2rem 1.5rem;
+  .landing-navbar {
+    padding: 0.6rem 1rem;
   }
 
-  .corner-logo {
-    height: 50px;
-    top: 1rem;
+  .navbar-logo {
+    height: 32px;
   }
 
-  .corner-logo-left {
-    left: 1rem;
-  }
-
-  .corner-logo-right {
-    right: 1rem;
+  .landing-content {
+    padding: 1rem;
   }
 
   .left-section {
@@ -526,40 +637,29 @@
   }
 
   .features-container {
-    max-width: 600px;
-    padding: 1rem;
-    gap: 1rem;
-  }
-
-  .feature-card {
-    padding: 1.25rem 1.5rem;
-  }
-
-  .feature-title {
-    font-size: 1.1rem;
-  }
-
-  .feature-description {
-    font-size: 0.85rem;
+    max-width: 100%;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.55rem;
+    padding: 0.5rem;
   }
 }
 
 @media (max-width: 480px) {
-  .landing-page {
-    padding: 1.5rem 1rem;
+  .landing-navbar {
+    padding: 0.5rem 0.75rem;
+    gap: 6px;
   }
 
-  .corner-logo {
-    height: 40px;
-    top: 0.75rem;
+  .navbar-logo {
+    height: 28px;
   }
 
-  .corner-logo-left {
-    left: 0.75rem;
+  .navbar-welcome {
+    font-size: 0.75rem;
   }
 
-  .corner-logo-right {
-    right: 0.75rem;
+  .landing-content {
+    padding: 0.75rem;
   }
 
   .left-section {
@@ -584,12 +684,13 @@
 
   .features-container {
     max-width: 100%;
+    grid-template-columns: 1fr;
   }
 
   .feature-card {
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 0.5rem;
   }
 
   .feature-content {
@@ -609,4 +710,89 @@
   .feature-title {
     font-size: 1rem;
   }
+}
+
+/* Prefix input inside feature card */
+.card-prefix-input {
+  margin-top: 0.5rem;
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  color: #2d3748;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: #fff;
+}
+
+.card-prefix-input:focus {
+  border-color: #dc143c;
+  box-shadow: 0 0 0 3px rgba(220, 20, 60, 0.08);
+}
+
+.card-prefix-input::placeholder {
+  color: #b0b0b0;
+}
+
+/* Inline title input for Part Sense Visualizer */
+.inline-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.inline-title-input {
+  border: none;
+  border-bottom: 2px solid #dc143c;
+  background: transparent;
+  font-size: inherit;
+  font-weight: inherit;
+  color: #dc143c;
+  outline: none;
+  width: 90px;
+  padding: 0 2px;
+  line-height: inherit;
+}
+
+.inline-title-input::placeholder {
+  color: #e07b8c;
+  font-weight: 500;
+}
+
+/* ── Role badge (in navbar) ── */
+.user-role-badge {
+  background: #DC143C;
+  color: #fff;
+  border-radius: 10px;
+  padding: 2px 9px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Logout button (in navbar) ── */
+.user-logout-btn {
+  background: transparent;
+  border: 1px solid rgba(220, 20, 60, 0.7);
+  color: #DC143C;
+  border-radius: 6px;
+  padding: 4px 14px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.user-logout-btn:hover {
+  background: #DC143C;
+  color: #fff;
+}
+
+/* ── Admin Panel card — white card style with red tint ── */
+.feature-card-admin {
+  border-left: 4px solid #DC143C !important;
+  background: #fff5f7 !important;
 }

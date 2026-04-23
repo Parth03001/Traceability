@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   BarChart,
   Bar,
@@ -11,6 +11,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from 'recharts';
 
@@ -24,22 +25,40 @@ import {
  * @param {Object} chartData.config - Chart configuration (axes, colors, etc.)
  */
 const ChartComponent = ({ chartData }) => {
+  // Measure the wrapper's actual pixel width via ResizeObserver so charts
+  // render correctly even when mounted inside animating or flex containers
+  // (e.g. the Framer Motion panel that starts at width:0).
+  const wrapperRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    // Measure immediately in case the container already has a layout
+    if (el.offsetWidth > 0) setContainerWidth(el.offsetWidth);
+    const ro = new ResizeObserver(() => {
+      if (el.offsetWidth > 0) setContainerWidth(el.offsetWidth);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   if (!chartData || !chartData.data || chartData.data.length === 0) {
     return null;
   }
 
   const { type, title, data, config = {} } = chartData;
 
-  // Default colors for charts
+  // Theme-matched colors: all visible on white, crimson red primary
   const DEFAULT_COLORS = [
-    '#3b82f6', // blue
-    '#ef4444', // red
-    '#22c55e', // green
-    '#f59e0b', // amber
-    '#8b5cf6', // purple
-    '#ec4899', // pink
-    '#14b8a6', // teal
-    '#f97316', // orange
+    '#CC0000', // Mahindra crimson red
+    '#E8A838', // amber gold (distinct, warm complement)
+    '#8B0000', // dark crimson
+    '#FF6B6B', // coral red
+    '#B5770D', // dark amber
+    '#C0392B', // pomegranate
+    '#F4845F', // salmon
+    '#7B1B1B', // very dark red
   ];
 
   const colors = config.colors || DEFAULT_COLORS;
@@ -70,17 +89,18 @@ const ChartComponent = ({ chartData }) => {
 
     return (
       <div style={{
-        backgroundColor: '#1f2937',
-        border: '1px solid #374151',
+        backgroundColor: '#ffffff',
+        border: '1px solid #CC0000',
         borderRadius: '6px',
-        padding: '10px',
-        color: '#ffffff'
+        padding: '8px 10px',
+        color: '#111827',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
       }}>
-        <p style={{fontWeight: 'bold', color: '#ffffff' }}>
+        <p style={{fontWeight: 'bold', color: '#CC0000', fontSize: '11px' }}>
           {formatMonth(label)}
         </p>
         {payload.map((entry, index) => (
-          <p key={index} style={{ color: '#ffffff' }}>
+          <p key={index} style={{ color: '#374151' }}>
             <span style={{ color: entry.color }}>●</span> {entry.name}: {entry.value}
           </p>
         ))}
@@ -88,195 +108,251 @@ const ChartComponent = ({ chartData }) => {
     );
   };
 
+  // Helper: returns true if a value is numeric or a string that parses as a finite number
+  const isNumericValue = (v) => {
+    if (typeof v === 'number') return true;
+    if (typeof v === 'string' && v.trim() !== '') {
+      const n = parseFloat(v.replace(/[^0-9.-]/g, ''));
+      return !isNaN(n) && isFinite(n);
+    }
+    return false;
+  };
+
   // Render Bar Chart
   const renderBarChart = () => {
-    const xAxis = config.xAxis || 'name';
-    const yAxes = config.yAxis || Object.keys(data[0]).filter(key => key !== xAxis);
+    // Detect xAxis key — fall back to first string column if specified key isn't in data
+    const specifiedX = config.xAxis || 'name';
+    const xAxis = (specifiedX in data[0])
+      ? specifiedX
+      : Object.keys(data[0]).find(k => typeof data[0][k] === 'string') || Object.keys(data[0])[0];
+
+    // Detect yAxis keys — fall back to all numeric columns if none specified or none match.
+    // Also handles PostgreSQL Decimal values serialised as strings (e.g. "123.45").
+    const specifiedY = Array.isArray(config.yAxis) && config.yAxis.length > 0
+      ? config.yAxis.filter(k => k in data[0])
+      : [];
+    const yAxes = specifiedY.length > 0
+      ? specifiedY
+      : Object.keys(data[0]).filter(k => k !== xAxis && isNumericValue(data[0][k]));
+
+    // Coerce y values to numbers in case SQL returned string numerics
+    const coercedData = data.map(row => {
+      const r = { ...row };
+      yAxes.forEach(k => { r[k] = parseFloat(String(r[k]).replace(/[^0-9.-]/g, '')) || 0; });
+      return r;
+    });
+
     const xAxisLabel = config.xAxisLabel || xAxis;
     const yAxisLabel = config.yAxisLabel || (yAxes.length === 1 ? yAxes[0] : 'Value');
 
+    if (yAxes.length === 0) return <div style={{color:'#9ca3af',padding:'16px',textAlign:'center'}}>No numeric columns to chart.</div>;
+
     return (
-      <ResponsiveContainer width="100%" height={320}>
-        <BarChart
-          data={data}
-          onClick={null}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis
-            dataKey={xAxis}
-            stroke="#9ca3af"
-            style={{ fontSize: '12px' }}
-            label={{
-              value: xAxisLabel,
-              position: 'insideBottom',
-              offset: -10,
-              style: { fill: '#9ca3af', fontSize: '14px', fontWeight: 'bold' }
-            }}
-          />
-          <YAxis
-            stroke="#9ca3af"
-            style={{ fontSize: '12px' }}
-            label={{
-              value: yAxisLabel,
-              angle: -90,
-              position: 'insideLeft',
-              style: { fill: '#9ca3af', fontSize: '14px', fontWeight: 'bold', textAnchor: 'middle' }
-            }}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          {yAxes.map((key, index) => (
-            <Bar
-              key={key}
-              dataKey={key}
-              fill={colors[index % colors.length]}
-              radius={[4, 4, 0, 0]}
-              onClick={null}
+      <div style={{ width: '100%', height: 300 }}>
+        <ResponsiveContainer width={containerWidth} height={300}>
+          <BarChart
+            data={coercedData}
+            margin={{ top: 5, right: 10, left: 10, bottom: 40 }}
+            onClick={null}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis
+              dataKey={xAxis}
+              stroke="#d1d5db"
+              tick={{ fill: '#6b7280', fontSize: 10 }}
+              angle={-35}
+              textAnchor="end"
+              interval={0}
+              height={60}
             />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
+            <YAxis
+              stroke="#d1d5db"
+              tick={{ fill: '#6b7280', fontSize: 10 }}
+              width={45}
+              tickFormatter={v => (v >= 1000 ? `${(v/1000).toFixed(1)}k` : v)}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            {yAxes.map((key, index) => (
+              <Bar
+                key={key}
+                dataKey={key}
+                name={key.replace(/_/g, ' ')}
+                fill={colors[index % colors.length]}
+                radius={[3, 3, 0, 0]}
+                onClick={null}
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     );
   };
 
   // Render Line Chart
   const renderLineChart = () => {
-    const xAxis = config.xAxis || 'name';
-    const yAxes = config.yAxis || Object.keys(data[0]).filter(key => key !== xAxis);
+    // Same resilient key detection as bar chart
+    const specifiedX = config.xAxis || 'name';
+    const xAxis = (specifiedX in data[0])
+      ? specifiedX
+      : Object.keys(data[0]).find(k => typeof data[0][k] === 'string') || Object.keys(data[0])[0];
+    const specifiedY = Array.isArray(config.yAxis) && config.yAxis.length > 0
+      ? config.yAxis.filter(k => k in data[0])
+      : [];
+    const yAxes = specifiedY.length > 0
+      ? specifiedY
+      : Object.keys(data[0]).filter(k => k !== xAxis && isNumericValue(data[0][k]));
+    const coercedData = data.map(row => {
+      const r = { ...row };
+      yAxes.forEach(k => { r[k] = parseFloat(String(r[k]).replace(/[^0-9.-]/g, '')) || 0; });
+      return r;
+    });
     const xAxisLabel = config.xAxisLabel || xAxis;
     const yAxisLabel = config.yAxisLabel || (yAxes.length === 1 ? yAxes[0] : 'Value');
 
+    if (yAxes.length === 0) return <div style={{color:'#9ca3af',padding:'16px',textAlign:'center'}}>No numeric columns to chart.</div>;
+
     return (
-      <ResponsiveContainer width="100%" height={320}>
-        <LineChart
-          data={data}
-          onClick={null}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis
-            dataKey={xAxis}
-            stroke="#9ca3af"
-            style={{ fontSize: '12px' }}
-            tickFormatter={formatMonth}
-            label={{
-              value: xAxisLabel,
-              position: 'insideBottom',
-              offset: -10,
-              style: { fill: '#9ca3af', fontSize: '14px', fontWeight: 'bold' }
-            }}
-          />
-          <YAxis
-            stroke="#9ca3af"
-            style={{ fontSize: '12px' }}
-            label={{
-              value: yAxisLabel,
-              angle: -90,
-              position: 'insideLeft',
-              style: { fill: '#9ca3af', fontSize: '14px', fontWeight: 'bold', textAnchor: 'middle' }
-            }}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          {yAxes.map((key, index) => (
-            <Line
-              key={key}
-              type="monotone"
-              dataKey={key}
-              stroke={colors[index % colors.length]}
-              strokeWidth={2}
-              dot={{ fill: colors[index % colors.length], r: 4 }}
-              activeDot={{ r: 6 }}
-              onClick={null}
+      <div style={{ width: '100%', height: 300 }}>
+        <ResponsiveContainer width={containerWidth} height={300}>
+          <LineChart
+            data={coercedData}
+            margin={{ top: 5, right: 10, left: 10, bottom: 40 }}
+            onClick={null}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis
+              dataKey={xAxis}
+              stroke="#d1d5db"
+              tick={{ fill: '#6b7280', fontSize: 10 }}
+              tickFormatter={formatMonth}
+              angle={-35}
+              textAnchor="end"
+              interval={0}
+              height={60}
             />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
+            <YAxis
+              stroke="#d1d5db"
+              tick={{ fill: '#6b7280', fontSize: 10 }}
+              width={45}
+              tickFormatter={v => (v >= 1000 ? `${(v/1000).toFixed(1)}k` : v)}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            {yAxes.map((key, index) => (
+              <Line
+                key={key}
+                type="monotone"
+                dataKey={key}
+                name={key.replace(/_/g, ' ')}
+                stroke={colors[index % colors.length]}
+                strokeWidth={2}
+                dot={{ fill: colors[index % colors.length], r: 4 }}
+                activeDot={{ r: 6 }}
+                onClick={null}
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     );
   };
 
   // Render Pie Chart
   const renderPieChart = () => {
-    const nameKey = config.nameKey || 'name';
-    const valueKey = config.valueKey || 'value';
+    // Resilient key detection
+    const specifiedName = config.nameKey || config.xAxis || 'name';
+    const nameKey = (specifiedName in data[0])
+      ? specifiedName
+      : Object.keys(data[0]).find(k => typeof data[0][k] === 'string') || Object.keys(data[0])[0];
+
+    const specifiedValue = config.valueKey || (config.yAxis && config.yAxis[0]) || 'value';
+    const valueKey = (specifiedValue in data[0])
+      ? specifiedValue
+      : Object.keys(data[0]).find(k => k !== nameKey && typeof data[0][k] === 'number') || Object.keys(data[0])[1];
 
     // Ensure data has the correct format for pie chart
     const pieData = data.map(item => ({
       name: item[nameKey],
-      value: parseFloat(item[valueKey]) || 0
+      value: parseFloat(String(item[valueKey] || '0').replace(/[^0-9.-]/g, '')) || 0
     }));
 
-    // Custom label that stays visible (not just on hover)
-    const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+    // Inline % label rendered inside the slice (never overflows SVG bounds)
+    const renderInlineLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+      if (percent < 0.08) return null; // skip tiny slices
       const RADIAN = Math.PI / 180;
-      const radius = outerRadius + 20;
-      const x = cx + radius * Math.cos(-midAngle * RADIAN);
-      const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-      // Only show label if percentage is > 5% (to avoid cluttering small slices)
-      if (percent < 0.05) return null;
-
+      const r = innerRadius + (outerRadius - innerRadius) * 0.55;
+      const x = cx + r * Math.cos(-midAngle * RADIAN);
+      const y = cy + r * Math.sin(-midAngle * RADIAN);
       return (
         <text
           x={x}
           y={y}
-          fill="#9ca3af"
-          textAnchor={x > cx ? 'start' : 'end'}
+          fill="#ffffff"
+          textAnchor="middle"
           dominantBaseline="central"
-          style={{ fontSize: '11px', fontWeight: '500' }}
+          style={{ fontSize: '10px', fontWeight: '700' }}
         >
-          {`${name}: ${(percent * 100).toFixed(1)}%`}
+          {`${(percent * 100).toFixed(1)}%`}
         </text>
       );
     };
 
-    // Custom pie tooltip with white text
+    // Custom pie tooltip
     const PieTooltip = ({ active, payload }) => {
       if (!active || !payload || !payload[0]) return null;
-
-      const data = payload[0];
+      const item = payload[0];
       const total = pieData.reduce((sum, d) => sum + d.value, 0);
-      const percent = ((data.value / total) * 100).toFixed(1);
-
+      const percent = ((item.value / total) * 100).toFixed(1);
       return (
         <div style={{
-          backgroundColor: '#1f2937',
-          border: '1px solid #374151',
+          backgroundColor: '#ffffff',
+          border: '1px solid #CC0000',
           borderRadius: '6px',
-          padding: '10px',
-          color: '#ffffff'
+          padding: '8px 10px',
+          color: '#111827',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
         }}>
-          <p style={{ margin: '0', fontWeight: 'bold', color: '#ffffff' }}>
-            {data.name}
+          <p style={{ margin: '0', fontWeight: 'bold', color: '#CC0000', fontSize: '11px' }}>
+            {item.name}
           </p>
-          <p style={{ margin: '3px 0 0 0', color: '#ffffff' }}>
-            {data.value} ({percent}%)
+          <p style={{ margin: '3px 0 0', color: '#374151', fontSize: '11px' }}>
+            {item.value} ({percent}%)
           </p>
         </div>
       );
     };
 
     return (
-      <ResponsiveContainer width="100%" height={350}>
-        <PieChart onClick={null}>
-          <Pie
-            data={pieData}
-            cx="50%"
-            cy="50%"
-            labelLine={{
-              stroke: '#9ca3af',
-              strokeWidth: 1
-            }}
-            label={renderCustomLabel}
-            outerRadius={100}
-            fill="#8884d8"
-            dataKey="value"
-            onClick={null}
-          >
-            {pieData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-            ))}
-          </Pie>
-          <Tooltip content={<PieTooltip />} />
-        </PieChart>
-      </ResponsiveContainer>
+      <div style={{ width: '100%', height: 340 }}>
+        <ResponsiveContainer width={containerWidth} height={340}>
+          <PieChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+            <Pie
+              data={pieData}
+              cx="50%"
+              cy="44%"
+              outerRadius={80}
+              dataKey="value"
+              label={renderInlineLabel}
+              labelLine={false}
+              onClick={null}
+            >
+              {pieData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+              ))}
+            </Pie>
+            <Tooltip content={<PieTooltip />} />
+            <Legend
+              iconType="square"
+              iconSize={8}
+              wrapperStyle={{ fontSize: '10px', color: '#374151', paddingTop: '6px' }}
+              formatter={(value) => (
+                <span style={{ color: '#374151', fontSize: '10px' }}>
+                  {value && value.length > 18 ? value.slice(0, 18) + '…' : value}
+                </span>
+              )}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
     );
   };
 
@@ -295,14 +371,32 @@ const ChartComponent = ({ chartData }) => {
   };
 
   return (
-    <div className="chart-container my-3 p-3 bg-gray-800 rounded-lg border border-gray-700">
+    <div style={{
+      display: 'block',
+      width: '100%',
+      margin: '8px 0',
+      padding: '12px',
+      backgroundColor: '#ffffff',
+      borderRadius: '8px',
+      border: '1px solid #e5e7eb',
+      boxSizing: 'border-box',
+    }}>
       {title && (
-        <h3 className="text-sm font-semibold text-gray-100 mb-3 pb-2 border-b border-gray-700">
+        <h3 style={{
+          fontSize: '0.8rem',
+          fontWeight: '600',
+          color: '#CC0000',
+          marginBottom: '10px',
+          paddingBottom: '8px',
+          borderBottom: '1px solid #e5e7eb',
+        }}>
           {title}
         </h3>
       )}
-      <div className="chart-wrapper">
-        {renderChart()}
+      {/* wrapperRef measures the actual pixel width so charts render correctly
+          inside animating / flex containers where width:"100%" resolves to 0 */}
+      <div ref={wrapperRef} style={{ display: 'block', width: '100%' }}>
+        {containerWidth > 0 && renderChart()}
       </div>
     </div>
   );

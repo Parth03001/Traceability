@@ -149,7 +149,8 @@ class StandardsGuidelinesAgent:
 
             just_finished_thinking = False
             response_started = False
-            
+            thinking_step_count = 0
+
             citations = []
             seen_citations = set()
 
@@ -164,6 +165,7 @@ class StandardsGuidelinesAgent:
                             continue
 
                         just_finished_thinking = True
+                        thinking_step_count += 1
                         yield {
                             "type": "thinking",
                             "step": "Processing",
@@ -201,6 +203,7 @@ class StandardsGuidelinesAgent:
                                         if thought:
                                             print(f"\n🤔 Reasoning:\n{thought}\n", flush=True)
                                             sys.stdout.flush()
+                                            thinking_step_count += 1
                                             yield {
                                                 "type": "thinking",
                                                 "step": "Reasoning",
@@ -318,8 +321,15 @@ class StandardsGuidelinesAgent:
                         continue
 
                     if current_node in RESPONSE_NODES:
-                        just_finished_thinking = False
-                        response_started = True
+                        if not response_started:
+                            just_finished_thinking = False
+                            response_started = True
+                            yield {
+                                "type": "progress",
+                                "stage": "generating",
+                                "step_count": thinking_step_count,
+                                "detail": "Generating response…",
+                            }
                         yield {
                             "type": "token",
                             "content": token_content,

@@ -40,6 +40,16 @@ async def lifespan(app: FastAPI):
         else:
             logger.warning("⚠️  Application started with some initialization failures")
 
+        # Run idempotent column + index migrations
+        try:
+            from app.connectors.migrations import run_index_migrations, run_column_migrations
+            from app.connectors.state_db_connector import StateDBConnector
+            _db = StateDBConnector()
+            run_column_migrations(_db.get_session)
+            run_index_migrations(_db.get_session)
+        except Exception as _idx_err:
+            logger.warning(f"Index migrations non-critical failure: {_idx_err}")
+
     except Exception as e:
         logger.error(f"❌ Critical error during startup: {e}")
         app.state.initialization_results = {"error": str(e)}
@@ -121,10 +131,14 @@ def create_app() -> FastAPI:
             app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
         
         # 2. Mount /uploads explicitly for PartLabeler
-        upload_dir = frontend_path / "uploads"
-        if not upload_dir.exists():
-            upload_dir.mkdir(parents=True, exist_ok=True)
-        app.mount("/uploads", StaticFiles(directory=str(upload_dir)), name="uploads")
+        # Use the same UPLOADS_DIRECTORY path that the upload route saves to
+        from pathlib import Path as _Path
+        _upload_path = _Path(settings.UPLOADS_DIRECTORY)
+        if not _upload_path.is_absolute():
+            _upload_path = _Path.cwd() / _upload_path
+        if not _upload_path.exists():
+            _upload_path.mkdir(parents=True, exist_ok=True)
+        app.mount("/uploads", StaticFiles(directory=str(_upload_path)), name="uploads")
         
         # 3. Catch-all route for SPA
         # This serves files if they exist (favicon.ico, etc.), otherwise index.html

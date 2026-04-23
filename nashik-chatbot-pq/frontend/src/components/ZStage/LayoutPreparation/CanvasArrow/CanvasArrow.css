@@ -1,0 +1,142 @@
+/* ── Wrapper ──────────────────────────────────────────────────────────────────
+   Invisible by default — the arrow body itself is visible but the bounding
+   box is not.  Shows on hover and when selected.                             */
+
+.ca-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  box-sizing: border-box;
+  border: 1.5px solid transparent;
+  border-radius: 3px;
+  user-select: none;
+  cursor: grab;
+  color: #2d3748;
+}
+
+.ca-wrap:active {
+  cursor: grabbing;
+}
+
+/* Subtle dashed hint on hover */
+.ca-wrap:hover {
+  border: 1.5px dashed rgba(56, 161, 105, 0.5);
+}
+
+/* ── Selected state ─────────────────────────────────────────────────────── */
+.ca-wrap--sel {
+  border: 1.5px solid #38a169 !important;
+  box-shadow: 0 0 0 2px rgba(56, 161, 105, 0.18);
+  cursor: default;
+}
+
+/* ── SVG arrow — fills the entire bounding box ───────────────────────────── */
+.ca-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+/* ── Floating toolbar (above the element) ────────────────────────────────── */
+.ca-toolbar {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 5px;
+  padding: 3px 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 20;
+  white-space: nowrap;
+  pointer-events: all;
+}
+
+.ca-rotate {
+  display: flex;
+  align-items: center;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-family: inherit;
+  color: #2c7a7b;
+  background: #e6fffa;
+  border: 1px solid #81e6d9;
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.ca-rotate:hover { background: #b2f5ea; }
+
+.ca-ok {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  background: #38a169;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.ca-ok:hover { background: #2f855a; }
+
+.ca-del {
+  display: flex;
+  align-items: center;
+  padding: 3px 6px;
+  color: #e53e3e;
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.ca-del:hover { background: #fed7d7; }
+
+/* ── Resize handles (8 dots) ──────────────────────────────────────────────── */
+.ca-rz {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background: #fff;
+  border: 2px solid #38a169;
+  border-radius: 50%;
+  z-index: 15;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+/* Visible on hover and when selected */
+.ca-wrap:hover .ca-rz,
+.ca-wrap--sel .ca-rz {
+  opacity: 1;
+}
+
+/* Corners */
+.ca-rz--nw { top: -5px;    left: -5px;                              }
+.ca-rz--ne { top: -5px;    right: -5px;                             }
+.ca-rz--se { bottom: -5px; right: -5px;                             }
+.ca-rz--sw { bottom: -5px; left: -5px;                              }
+
+/* Edges */
+.ca-rz--n  { top: -5px;    left: 50%; transform: translateX(-50%); }
+.ca-rz--s  { bottom: -5px; left: 50%; transform: translateX(-50%); }
+.ca-rz--e  { right: -5px;  top: 50%;  transform: translateY(-50%); }
+.ca-rz--w  { left: -5px;   top: 50%;  transform: translateY(-50%); }

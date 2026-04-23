@@ -59,12 +59,13 @@ class AuthService:
                 "last_name": last_name,
                 "email": email,
                 "password_hash": password_hash,
+                "role": "user",
                 "created_at": datetime.datetime.utcnow(),
             },
         )
 
         logger.info(f"New user registered: {username} (id={user_id})")
-        return {"user_id": user_id, "username": username, "first_name": first_name, "last_name": last_name}
+        return {"user_id": user_id, "username": username, "first_name": first_name, "last_name": last_name, "role": "user"}
 
     def login(self, username: str, password: str) -> dict:
         """
@@ -87,5 +88,5 @@ class AuthService:
             raise ValueError("Invalid username or password")
 
         row = rows[0]
-        logger.info(f"User logged in: {row[1]} (id={row[0]})")
-        return {"user_id": row[0], "username": row[1], "first_name": row[2], "last_name": row[3]}
+        logger.info(f"User logged in: {row[1]} (id={row[0]}) role={row[4]}")
+        return {"user_id": row[0], "username": row[1], "first_name": row[2], "last_name": row[3], "role": row[4]}

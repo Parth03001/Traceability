@@ -126,5 +126,36 @@ export function fixMarkdownTables(markdown, isComplete = false) {
   // Fix 10: Normalize multiple consecutive blank lines (keep max 2)
   result = result.replace(/\n{3,}/g, "\n\n");
 
+  // Fix 11: Heading marker (####) embedded mid-line after non-whitespace text
+  // Pattern: "Total defects:135#### Source:" -> "Total defects:135\n\n#### Source:"
+  // The LLM sometimes concatenates a heading immediately after inline text without a newline.
+  // All existing fixes use ^ (line-start) — this catches the mid-line case.
+  result = result.replace(/([^\n#])(#{1,6})(\s)/g, "$1\n\n$2$3");
+
+  // Fix 12: Plain text line immediately before a table row with no blank line
+  // Pattern: "raw_warranty_data\n| Issue |" -> "raw_warranty_data\n\n| Issue |"
+  // react-markdown requires a blank line before a table when preceded by a paragraph.
+  result = result.replace(
+    /([^\n|])\n(\|[^\n]+\|)/g,
+    (match, beforeText, tableRow) => {
+      // Don't double-insert if the char before is already a newline (blank line exists)
+      return beforeText + "\n\n" + tableRow;
+    }
+  );
+
+  // Fix 13: Table name at start of line immediately followed by pipe with no space/newline
+  // Pattern: "raw_warranty_data| Column | Count |" -> "raw_warranty_data\n\n| Column | Count |"
+  // The LLM sometimes concatenates a table/source name directly with the first table pipe.
+  // Use ^ (line-start) with gm flag to avoid touching mid-line pipe characters.
+  result = result.replace(
+    /^([A-Za-z0-9_]+)\|([^\n]+\|[^\n]*)/gm,
+    (match, word, tableContent) => {
+      return word + "\n\n|" + tableContent;
+    }
+  );
+
+  // Re-normalise after new fixes (avoid triple+ newlines introduced above)
+  result = result.replace(/\n{3,}/g, "\n\n");
+
   return result;
 }

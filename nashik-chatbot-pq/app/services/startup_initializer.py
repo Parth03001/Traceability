@@ -106,6 +106,12 @@ class StartupInitializer:
         try:
             # --- tables (SQLAlchemy handles its own connection internally) ---
             metadata.create_all(engine, checkfirst=True)
+
+            # --- run incremental schema migrations (idempotent) ---
+            from app.connectors.state_db_manager import StateDBManager
+            StateDBManager().run_migrations()
+            logger.info("  ✅ Migrations applied")
+
             tables = inspect(engine).get_table_names()
             logger.info(f"  ✅ Tables ready ({len(tables)})")
             table_result = {

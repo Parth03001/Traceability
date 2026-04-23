@@ -1,0 +1,123 @@
+
+can tell me most occuring issue for the headlamp?
+
+Across sources, the most occurring headlamp issue is generic “Head Lamp Failure” in warranty claims, with “Socket Broken” dominant in in-plant RPT and “Foreign Particle Inside” leading in RFI field reports.
+
+Source:
+raw_warranty_data| Issue (Complaint Description) | Claims | % of Total |
+|---|---:|---:|
+| HEAD LAMP FAILURE |3,505 |94.6% |
+| HEADLAMP AIMIMG MOTOR FAILURE |110 |3.0% |
+| HEAD LAMP CONTROL UNIT |25 |0.7% |
+| SWITCH - HEADLAMP AIMIMG FAILURE |20 |0.5% |
+| TAIL LAMP FAILURE |15 |0.4% |
+| STEERING RATTLE |5 |0.1% |
+| PWM HEADLAMP MODULE FAILURE |5 |0.1% |
+| COMBINATION SWITCH FAILURE |5 |0.1% |
+| BULB FAILURE |5 |0.1% |
+| SCHEDULED SERVICE |5 |0.1% |
+| SIREN FAILURE |5 |0.1% |
+
+• Label: Overall top issue Head Lamp Failure accounts for94.6% of headlamp-related warranty claims, indicating broad in-field inoperability rather than a single subcomponent.
+Source:
+raw_rpt_data| Issue (In-Plant Defect) | Defects | % of Total |
+|---|---:|---:|
+| SOCKET BROKEN |45 |33.3% |
+| CONNECTION NOT DONE |27 |20.0% |
+| SHORTAGE |12 |8.9% |
+| WRONG |12 |8.9% |
+| BOLT LOOSE |12 |8.9% |
+| AIMING NOT OK |9 |6.7% |
+| NOT FIT |6 |4.4% |
+| BROKEN |3 |2.2% |
+| SOCKET CONNECTION NOT DONE |3 |2.2% |
+| WIRE TRAPPED |3 |2.2% |
+| BOLT HALF TORQUE |3 |2.2% |
+
+• Label: In-plant driver Socket Broken and Connection Not Done together make up over half of headlamp-related in-plant defects, suggesting handling/assembly and electrical connection discipline as key levers.
+Source:
+raw_gnovac_data| Issue (Audit Defect) | Findings | % of Total |
+|---|---:|---:|
+| Inoperative |3 |100.0% |
+
+• Label: Audit signal Limited GNOVAC volume, but all headlamp findings are “Inoperative,” aligning with the field “Head Lamp Failure” symptom.
+Source:
+raw_rfi_data| Issue (Field Report Defect) | Reports | % of Total |
+|---|---:|---:|
+| FOREIGN PARTICLE INSIDE |18 |54.5% |
+| AIMING INOPERATIVE |6 |18.2% |
+| PARTICAL INSIDE |6 |18.2% |
+| Moisture Inside |3 |9.1% |
+
+• Label: Field quality cues “Foreign Particle Inside” (incl. misspelled duplicate records) dominates, with “Moisture Inside” also present—both suggest sealing/cleanliness issues at assembly or supplier.
+Source:
+raw_esqa_dataNo records found — no headlamp-specific supplier rejection quantities matched the filters.
+
+• Label: Cross-source synthesis Warranty’s “Head Lamp Failure” is the most frequent customer-facing symptom. In-plant data points to broken sockets and missed connections as likely assembly drivers, while RFI highlights contamination/sealing concerns inside the headlamp.
+
+• Label: Immediate actions Reinforce headlamp connector handling and verification (torque/fit/connection), introduce socket damage Poka‑Yoke, and tighten cleanliness/sealing controls; consider targeted audits where “aiming not OK” and “inoperative” overlap.
+
+• Label: Data improvement Standardize defect taxonomy (e.g., unify “Foreign Particle Inside” and “PARTICAL INSIDE”) to sharpen Pareto clarity and trace subcomponent linkages (aim motor, module, socket).
+
+Chart: Top Headlamp Issues by Source
+
+give me for the last quater
+
+In the last completed quarter, “Head Lamp Failure” was the most frequent headlamp issue in warranty claims, while “Socket Broken” led in RPT and “Foreign Particle Inside” led in RFI.
+
+Source:
+raw_warranty_data (last quarter)
+
+Issue (Complaint Description)	Claims	% of Total
+HEAD LAMP FAILURE	2,103	94.6%
+HEADLAMP AIMIMG MOTOR FAILURE	66	3.0%
+HEAD LAMP CONTROL UNIT	15	0.7%
+SWITCH - HEADLAMP AIMIMG FAILURE	12	0.5%
+TAIL LAMP FAILURE	9	0.4%
+STEERING RATTLE	3	0.1%
+PWM HEADLAMP MODULE FAILURE	3	0.1%
+COMBINATION SWITCH FAILURE	3	0.1%
+BULB FAILURE	3	0.1%
+SCHEDULED SERVICE	3	0.1%
+SIREN FAILURE	3	0.1%
+Source:
+raw_rpt_data (last quarter)
+
+Issue (In-Plant Defect)	Defects	% of Total
+SOCKET BROKEN	15	33.3%
+CONNECTION NOT DONE	9	20.0%
+SHORTAGE	4	8.9%
+WRONG	4	8.9%
+BOLT LOOSE	4	8.9%
+AIMING NOT OK	3	6.7%
+NOT FIT	2	4.4%
+BROKEN	1	2.2%
+SOCKET CONNECTION NOT DONE	1	2.2%
+WIRE TRAPPED	1	2.2%
+BOLT HALF TORQUE	1	2.2%
+Source:
+raw_gnovac_data (last quarter)
+
+Issue (Audit Defect)	Findings	% of Total
+Inoperative	1	100.0%
+Source:
+raw_rfi_data (last quarter)
+
+Issue (Field Report Defect)	Reports	% of Total
+FOREIGN PARTICLE INSIDE	6	54.5%
+AIMING INOPERATIVE	2	18.2%
+PARTICAL INSIDE	2	18.2%
+Moisture Inside	1	9.1%
+Source:
+raw_esqa_data (last quarter)
+No records found — no headlamp-specific supplier rejection quantities in the period.
+
+• Label: Dominant symptom Warranty confirms Head Lamp Failure as the dominant field symptom last quarter (94.6% of headlamp-related claims).
+
+• Label: In-plant levers Socket damage and missed connections are the top in-plant drivers; prioritize connector handling, assembly checks, and torque/fit verifications.
+
+• Label: Field quality cues Foreign particle and moisture inside the lamp suggest sealing/cleanliness gaps—tighten cleanliness controls and sealing verification.
+
+• Label: Alignment across sources GNOVAC’s “Inoperative” aligns with warranty symptom; absence of eSQA rejections implies issues are more assembly/handling or internal contamination than supplier batch rejections.
+
+Chart: Top Headlamp Issues by Source – Last Quarter

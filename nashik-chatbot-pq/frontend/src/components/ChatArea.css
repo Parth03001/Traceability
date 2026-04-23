@@ -46,6 +46,8 @@
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 /* Fade effect at top when scrolling */
@@ -232,6 +234,7 @@
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
+  overflow-x: hidden;
   animation: fadeInContent 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
@@ -433,28 +436,9 @@
   transform: scale(1.1);
 }
 
-/* Scrollbar Styling - Gemini-like smooth scrollbar */
 .chat-content::-webkit-scrollbar {
-  width: 8px;
-}
-
-.chat-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.chat-content::-webkit-scrollbar-thumb {
-  background: rgba(220, 20, 60, 0.2);
-  border-radius: 10px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  transition: background 0.3s ease;
-}
-
-.chat-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(220, 20, 60, 0.35);
-  border-radius: 10px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  width: 0;
+  height: 0;
 }
 
 /* Responsive Design */

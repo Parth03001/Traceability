@@ -103,7 +103,16 @@ const ChatMessage = ({ message, conversationId, thinkingSteps, onOpenPdf }) => {
                     <ChartComponent chartData={message.chart_data} />
                   )}
                   <div className="bot-message-markdown">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        table: ({ node, ...props }) => (
+                          <div className="table-scroll-wrapper">
+                            <table {...props} />
+                          </div>
+                        ),
+                      }}
+                    >
                       {fixedMarkdown}
                     </ReactMarkdown>
                   </div>

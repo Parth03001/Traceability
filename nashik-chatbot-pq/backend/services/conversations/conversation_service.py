@@ -58,102 +58,136 @@ class ConversationService:
             logger.error(f"Error starting new chat: {e}")
             raise
 
+    # Maximum number of automatic retries when the agent finishes tool calls
+    # but emits zero response tokens (e.g. connection dropped mid-generation).
+    _MAX_RETRIES = 1
+
+    # Nudge sent to the agent on retry so it produces its final answer from
+    # the tool-call results already stored in the checkpointer.
+    _RETRY_NUDGE = (
+        "Based on all the tool-call results and analysis you have already completed above, "
+        "please now synthesise and provide your comprehensive final answer to the user's question. "
+        "Do NOT call any more tools — write the answer directly."
+    )
+
     def process_streaming(
         self, conversation_id: int, payload, agent_type: str = "analyst"
     ) -> Generator[str, None, None]:
         """
-        Stream the processing of a query through the specified agent
+        Stream the processing of a query through the specified agent.
+
+        Includes an automatic retry: if the agent completes all tool calls but
+        emits zero response tokens (e.g. the connection was lost mid-generation),
+        the service re-invokes the same agent thread with a nudge so it produces
+        the final answer from its already-saved checkpointer state.
 
         Args:
             conversation_id: Unique identifier for the chat session
             payload: The request payload containing user message
-            agent_type: Agent type to use ('analyst' or 'cypher')
+            agent_type: Agent type to use
 
         Yields:
             JSON-formatted string events for streaming
         """
         try:
             if not payload.user_message:
-                yield json.dumps(
-                    {"type": "error", "content": "User message is required"}
-                ) + "\n\n"
+                yield f"data: {json.dumps({'type': 'error', 'content': 'User message is required'})}\n\n"
                 return
 
-            full_response = []
+            full_response: list[str] = []
             chart_data = None
-            citations_data = []
-            response_saved = False
+            citations_data: list = []
 
-            # Get agent from pool
             with self.agent_pool.get_agent(conversation_id, agent_type) as agent:
                 logger.info(
                     f"Using {agent_type} agent for conversation {conversation_id}"
                 )
 
-                # Stream agent responses
-                for event in agent.stream(user_question=payload.user_message):
-                    # Send event to client
-                    yield f"data: {json.dumps(event)}\n\n"
+                original_question = payload.user_message
 
-                    # Collect response tokens
-                    if event.get("type") == "token":
-                        full_response.append(event["content"])
+                for attempt in range(self._MAX_RETRIES + 1):
+                    question = original_question if attempt == 0 else self._RETRY_NUDGE
+                    token_count = 0
+                    thinking_count = 0
 
-                    # Collect chart data if present
-                    elif event.get("type") == "chart":
-                        chart_data = event.get("chart_data")
-                        logger.info(f"Captured chart data: {chart_data.get('type') if chart_data else None}")
-                        
-                    # Collect citations if present
-                    elif event.get("type") == "citations":
-                        citations_data = event.get("citations", [])
-                        logger.info(f"Captured {len(citations_data)} citations")
+                    if attempt > 0:
+                        logger.warning(
+                            f"[conv={conversation_id}] Retry #{attempt}: agent had "
+                            f"{thinking_count_prev} thinking steps but 0 tokens. "
+                            "Re-invoking with nudge."
+                        )
+                        yield (
+                            f"data: {json.dumps({'type': 'progress', 'stage': 'retrying', 'attempt': attempt, 'detail': 'Agent did not generate a response — retrying…'})}\n\n"
+                        )
 
-                # Save response to database after streaming completes
+                    for event in agent.stream(user_question=question):
+                        yield f"data: {json.dumps(event)}\n\n"
+
+                        etype = event.get("type")
+                        if etype == "token":
+                            full_response.append(event["content"])
+                            token_count += 1
+                        elif etype == "thinking":
+                            thinking_count += 1
+                        elif etype == "chart":
+                            chart_data = event.get("chart_data")
+                            logger.info(
+                                f"Captured chart data: "
+                                f"{chart_data.get('type') if chart_data else None}"
+                            )
+                        elif etype == "citations":
+                            citations_data = event.get("citations", [])
+                            logger.info(f"Captured {len(citations_data)} citations")
+
+                    # Decide whether to retry
+                    if token_count > 0:
+                        break  # Got a response — done
+                    if attempt >= self._MAX_RETRIES:
+                        break  # No more retries allowed
+                    if thinking_count == 0:
+                        break  # Agent did nothing at all; retrying won't help
+
+                    # Save thinking count for the warning message on next loop
+                    thinking_count_prev = thinking_count
+
+                # ── Persist and finalise ────────────────────────────────────
                 if full_response:
                     complete_response = "".join(full_response)
-                    print(complete_response)
-                    response_data = {
+                    response_data: dict = {
                         "response": complete_response,
                         "similar_docs": citations_data if citations_data else [],
                     }
-
-                    # Include chart data if available
                     if chart_data:
                         response_data["chart_data"] = chart_data
 
                     message_id = self.chat_manager.save_message(
                         conversation_id=conversation_id,
-                        query=payload.user_message,
+                        query=original_question,
                         response=response_data,
                         clarification_needed=False,
                     )
 
-                    # Update chat title if first message
+                    # Update chat title on first message
                     messages = self.chat_manager.get_conversation_messages(
                         conversation_id
                     )
                     if len(messages) == 1:
-                        title = payload.user_message[:50] + (
-                            "..." if len(payload.user_message) > 50 else ""
+                        title = original_question[:50] + (
+                            "..." if len(original_question) > 50 else ""
                         )
                         self.chat_manager.update_chat_title(conversation_id, title)
 
-                    # Send final response with message ID and chart data
-                    final_data = {
+                    final_data: dict = {
                         "type": "final",
                         "content": complete_response,
                         "messageId": message_id,
                         "response": complete_response,
-                        "citations": citations_data if citations_data else []
+                        "citations": citations_data if citations_data else [],
                     }
-
-                    # Include chart data in final response
                     if chart_data:
                         final_data["chart_data"] = chart_data
 
                     yield f"data: {json.dumps(final_data)}\n\n"
-
                     logger.info(
                         f"Saved message {message_id} to conversation {conversation_id}"
                     )

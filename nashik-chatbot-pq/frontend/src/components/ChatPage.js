@@ -410,6 +410,22 @@ function ChatPage() {
   const handleWebSocketMessage = (data) => {
     console.log("WebSocket message received:", data);
 
+    // Keepalive pings from server — ignore silently
+    if (data.type === "keepalive") return;
+
+    // Progress stage updates (thinking → generating → retrying)
+    if (data.type === "progress") {
+      const stage = data.stage || "";
+      if (stage === "generating") {
+        setCurrentThinkingStep(
+          `Generating response${data.step_count ? ` (${data.step_count} steps done)` : "…"}`
+        );
+      } else if (stage === "retrying") {
+        setCurrentThinkingStep("Agent retrying — generating final answer…");
+      }
+      return;
+    }
+
     // Handle both "thinking" and "thinking_token" types
     if (data.type === "thinking" || data.type === "thinking_token") {
       // Add thinking step - accumulate, don't replace
@@ -505,13 +521,15 @@ function ChatPage() {
       // Handle chart data event
       console.log("Chart data received:", data.chart_data);
 
-      // Store chart data in the last bot message
+      // Store chart data in the last bot message.
+      // Note: do NOT guard with !out[idx].messageId — the "final" event can arrive
+      // before the "chart" event, so messageId may already be set when we get here.
       setMessages((prev) => {
         if (!prev.length) return prev;
         const out = [...prev];
         const idx = out.length - 1;
 
-        if (out[idx].sender === "bot" && !out[idx].messageId) {
+        if (out[idx].sender === "bot") {
           out[idx] = {
             ...out[idx],
             chart_data: data.chart_data,

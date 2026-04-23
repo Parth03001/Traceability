@@ -43,6 +43,7 @@ class MappingRequest(BaseModel):
     tempFilePath: str
     mapping: Dict[str, str]
     userId: int
+    dataSource: Optional[str] = "warranty"
 
 @router.get("/warranty-lookup")
 async def warranty_lookup(
@@ -51,14 +52,18 @@ async def warranty_lookup(
     month: Optional[list[str]] = Query(None),
     baseModel: Optional[list[str]] = Query(None),
     misBucket: Optional[list[str]] = Query(None),
-    mfgQtr: Optional[list[str]] = Query(None)
+    mfgQtr: Optional[list[str]] = Query(None),
+    dataSource: Optional[str] = Query("warranty"),
+    buyoffStage: Optional[list[str]] = Query(None),
+    onlineOffline: Optional[list[str]] = Query(None),
+    defectType: Optional[list[str]] = Query(None),
 ):
     try:
-        result = get_service().get_warranty_data(userId, partName, month, baseModel, misBucket, mfgQtr)
+        result = get_service().get_source_data(userId, partName, month, baseModel, misBucket, mfgQtr, dataSource, buyoffStage, onlineOffline, defectType)
         return result
     except Exception as e:
-        logger.error(f"Warranty lookup error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch warranty data")
+        logger.error(f"Data lookup error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch data")
 
 @router.post("/warranty-upload")
 async def upload_warranty_file(file: UploadFile = File(...)):
@@ -79,9 +84,9 @@ async def upload_warranty_file(file: UploadFile = File(...)):
 
 @router.post("/warranty-confirm-mapping")
 async def confirm_warranty_mapping(payload: MappingRequest):
-    """Process file with confirmed mapping"""
+    """Process file with confirmed mapping, dispatches to correct data source"""
     try:
-        count = get_service().process_mapped_warranty_data(payload.tempFilePath, payload.mapping, payload.userId)
+        count = get_service().process_data_for_source(payload.tempFilePath, payload.mapping, payload.userId, payload.dataSource)
         # Cleanup temp file
         if os.path.exists(payload.tempFilePath):
             os.remove(payload.tempFilePath)
@@ -91,9 +96,9 @@ async def confirm_warranty_mapping(payload: MappingRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/filter-options")
-async def get_filter_options(userId: int = Query(...)):
+async def get_filter_options(userId: int = Query(...), dataSource: Optional[str] = Query("warranty")):
     try:
-        return get_service().get_filter_options(userId)
+        return get_service().get_filter_options_for_source(userId, dataSource)
     except Exception as e:
         logger.error(f"Filter options error: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch filter options")
@@ -207,10 +212,14 @@ async def get_dashboard_data(
     month: Optional[list[str]] = Query(None),
     baseModel: Optional[list[str]] = Query(None),
     misBucket: Optional[list[str]] = Query(None),
-    mfgQtr: Optional[list[str]] = Query(None)
+    mfgQtr: Optional[list[str]] = Query(None),
+    dataSource: Optional[str] = Query("warranty"),
+    buyoffStage: Optional[list[str]] = Query(None),
+    onlineOffline: Optional[list[str]] = Query(None),
+    defectType: Optional[list[str]] = Query(None),
 ):
     try:
-        return get_service().get_dashboard_data(userId, partName, month, baseModel, misBucket, mfgQtr)
+        return get_service().get_dashboard_data_for_source(userId, partName, month, baseModel, misBucket, mfgQtr, dataSource, buyoffStage, onlineOffline, defectType)
     except Exception as e:
         logger.error(f"Dashboard data error: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch dashboard data")

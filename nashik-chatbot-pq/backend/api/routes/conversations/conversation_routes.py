@@ -6,6 +6,7 @@ Handles HTTP and WebSocket endpoints for conversations
 import logging
 import json
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -21,6 +22,9 @@ from backend.models.schemas.conversation_schemas import (
     InitiateConversationResponseDto,
     FeedbackDto,
 )
+
+# Dedicated thread pool for streaming generators (non-daemon so clean shutdown)
+_stream_executor = ThreadPoolExecutor(max_workers=20, thread_name_prefix="ws-stream")
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["conversations"])
@@ -163,12 +167,19 @@ async def websocket_endpoint(
     conversation_id: int = Path(..., description="Unique conversation identifier"),
 ):
     """
-    WebSocket endpoint for streaming conversation responses
+    WebSocket endpoint for streaming conversation responses.
+
+    Uses an asyncio Queue to decouple the synchronous streaming generator
+    (which runs in a thread-pool executor) from the async WebSocket send loop.
+    A keepalive ping is sent every KEEPALIVE_INTERVAL seconds so the connection
+    never times out during long agent tool-call chains.
 
     Args:
         websocket: WebSocket connection
         conversation_id: Conversation ID
     """
+    KEEPALIVE_INTERVAL = 15.0  # seconds between pings when no events arrive
+
     await websocket.accept()
 
     try:
@@ -177,54 +188,111 @@ async def websocket_endpoint(
 
         try:
             payload_data = json.loads(data)
-
-            agent_type = payload_data.get("agent_type", "analyst")
-
-            # Validate agent type
-            if agent_type not in ["analyst", "cypher", "standards_guidelines"]:
-                await websocket.send_json(
-                    {
-                        "type": "error",
-                        "content": f"Invalid agent type: {agent_type}. Must be 'analyst', 'cypher', or 'standards_guidelines'.",
-                    }
-                )
-                return
-
-            # Create payload
-            payload = ConversationDto(
-                user_id=payload_data.get("user_id", 1),  # Default user for now
-                user_message=payload_data.get("user_message"),
-                agent_type=agent_type,
-            )
-
-            if not payload.user_message:
-                await websocket.send_json(
-                    {"type": "error", "content": "User message is required"}
-                )
-                return
-
-            # Send initialization message
-            await websocket.send_json(
-                {
-                    "type": "thinking",
-                    "step": "initialization",
-                    "content": f"Processing your query with {agent_type.upper()} agent...",
-                }
-            )
-
-            # Stream responses
-            for event_str in get_conversation_service().process_streaming(
-                conversation_id, payload, agent_type
-            ):
-                if event_str.startswith("data: "):
-                    json_str = event_str[6:].strip()
-                    await websocket.send_text(json_str)
-                    await asyncio.sleep(0.01)  # Small delay for smooth streaming
-
         except json.JSONDecodeError:
             await websocket.send_json(
                 {"type": "error", "content": "Invalid message format"}
             )
+            return
+
+        agent_type = payload_data.get("agent_type", "analyst")
+
+        # Validate agent type
+        if agent_type not in [
+            "analyst",
+            "cypher",
+            "standards_guidelines",
+            "part_labeler_dashboard",
+        ]:
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "content": (
+                        f"Invalid agent type: {agent_type}. Must be one of: "
+                        "'analyst', 'cypher', 'standards_guidelines', 'part_labeler_dashboard'."
+                    ),
+                }
+            )
+            return
+
+        # Build payload
+        payload = ConversationDto(
+            user_id=payload_data.get("user_id", 1),
+            user_message=payload_data.get("user_message"),
+            agent_type=agent_type,
+        )
+
+        if not payload.user_message:
+            await websocket.send_json(
+                {"type": "error", "content": "User message is required"}
+            )
+            return
+
+        # Send initialization message (filtered by frontend, kept for debugging)
+        await websocket.send_json(
+            {
+                "type": "thinking",
+                "step": "initialization",
+                "content": f"Processing your query with {agent_type.upper()} agent...",
+            }
+        )
+
+        # ------------------------------------------------------------------ #
+        # Queue-based streaming with keepalive                                 #
+        # The sync generator runs in a thread-pool executor so it never        #
+        # blocks the event loop.  The event loop can send keepalive pings      #
+        # whenever the queue is empty (agent is doing a long tool call).       #
+        # ------------------------------------------------------------------ #
+        queue: asyncio.Queue = asyncio.Queue()
+        loop = asyncio.get_event_loop()
+
+        def _run_streaming():
+            """Run in executor thread; push every event onto the asyncio queue."""
+            try:
+                for event_str in get_conversation_service().process_streaming(
+                    conversation_id, payload, agent_type
+                ):
+                    loop.call_soon_threadsafe(queue.put_nowait, event_str)
+            except Exception as exc:
+                err_event = json.dumps({"type": "error", "content": str(exc)})
+                loop.call_soon_threadsafe(
+                    queue.put_nowait, f"data: {err_event}\n\n"
+                )
+            finally:
+                # Sentinel: signals the consumer loop to stop
+                loop.call_soon_threadsafe(queue.put_nowait, None)
+
+        stream_future = loop.run_in_executor(_stream_executor, _run_streaming)
+
+        # Consumer loop: forward events to WebSocket; ping when queue is idle
+        while True:
+            try:
+                event_str = await asyncio.wait_for(
+                    queue.get(), timeout=KEEPALIVE_INTERVAL
+                )
+            except asyncio.TimeoutError:
+                # No event arrived in time — send a keepalive ping and wait again
+                try:
+                    await websocket.send_json({"type": "keepalive"})
+                except Exception:
+                    break  # Client disconnected
+                continue
+
+            if event_str is None:
+                break  # Streaming completed
+
+            if event_str.startswith("data: "):
+                json_str = event_str[6:].strip()
+                try:
+                    await websocket.send_text(json_str)
+                    await asyncio.sleep(0.01)  # Smooth streaming
+                except Exception:
+                    break  # Client disconnected mid-stream
+
+        # Wait for the executor thread to finish (it should already be done)
+        try:
+            await asyncio.wait_for(asyncio.wrap_future(stream_future), timeout=5.0)
+        except (asyncio.TimeoutError, Exception):
+            pass
 
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected for conversation {conversation_id}")
@@ -233,14 +301,14 @@ async def websocket_endpoint(
         logger.error(f"WebSocket error: {e}", exc_info=True)
         try:
             await websocket.send_json({"type": "error", "content": str(e)})
-            await asyncio.sleep(0.1)  # Give time for error to be sent
-        except:
+            await asyncio.sleep(0.1)
+        except Exception:
             pass
 
     finally:
         try:
             await websocket.close()
-        except:
+        except Exception:
             pass
 
 

@@ -1,0 +1,223 @@
+.buyoff-icon-wrapper {
+  position: absolute;
+  z-index: 10;
+  user-select: none;
+  width: 80px;
+  height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 6px;
+  gap: 0;
+}
+
+.buyoff-diamond {
+  width: 44px;
+  height: 44px;
+  background-color: #f6c90e;
+  transform: rotate(45deg);
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  border: 2px solid #c9a000;
+  transition: box-shadow 0.15s;
+}
+
+.buyoff-diamond:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.buyoff-diamond:active {
+  cursor: grabbing;
+}
+
+.buyoff-diamond-inner {
+  transform: rotate(-45deg);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--mahindra-red-dark);
+  pointer-events: none;
+}
+
+/* ── Connection ports ─────────────────────────────────────────────────────── */
+.buyoff-port {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--mahindra-red);
+  border: 2px solid #fff;
+  cursor: crosshair;
+  padding: 0;
+  box-shadow: 0 0 0 1px var(--mahindra-red);
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.1s;
+  z-index: 20;
+}
+
+.buyoff-icon-wrapper:hover .buyoff-port {
+  opacity: 1;
+}
+
+.buyoff-port:hover {
+  background: var(--mahindra-red-dark);
+  transform: scale(1.4) !important;
+}
+
+.buyoff-port--right  { right: -5px;  top: 50%;    transform: translateY(-50%); }
+.buyoff-port--left   { left: -5px;   top: 50%;    transform: translateY(-50%); }
+.buyoff-port--top    { top: -5px;    left: 50%;   transform: translateX(-50%); }
+.buyoff-port--bottom { bottom: -5px; left: 50%;   transform: translateX(-50%); }
+
+/* Accordion panel */
+.buyoff-accordion {
+  position: absolute;
+  left: 68px;
+  top: 0;
+  background-color: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: var(--card-shadow);
+  min-width: 180px;
+  z-index: 20;
+}
+
+.buyoff-accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: var(--mahindra-red);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 5px 5px 0 0;
+}
+
+.buyoff-close-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.buyoff-accordion-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.buyoff-connection-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.buyoff-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.buyoff-dot--in {
+  background-color: #38a169;
+}
+
+.buyoff-dot--out {
+  background-color: #e53e3e;
+}
+
+.buyoff-dot--buyoff {
+  background-color: #d69e2e;
+}
+
+.buyoff-connection-label {
+  font-size: 12px;
+  color: var(--text-dark);
+  font-weight: 500;
+}
+
+.buyoff-delete-btn {
+  width: 100%;
+  padding: 6px 12px;
+  background-color: #fff5f5;
+  color: #e53e3e;
+  border: none;
+  border-top: 1px solid #fed7d7;
+  border-radius: 0 0 5px 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: background-color 0.15s;
+}
+
+.buyoff-delete-btn:hover {
+  background-color: #fed7d7;
+}
+
+/* ── Name label below diamond ─────────────────────────────────────────────── */
+.buyoff-name-area {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: text;
+  /* Push label well below the diamond's rotated lower tip (≈31px below div center).
+     Diamond div is 44px, its visual bottom tip protrudes ~9px past the box edge.
+     So we add 12px margin-top to clear that tip comfortably. */
+  margin-top: 12px;
+}
+
+.buyoff-name-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dark, #333);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 78px;
+  line-height: 1.3;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.buyoff-name-placeholder {
+  color: #aaa;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.buyoff-icon-wrapper:hover .buyoff-name-label {
+  background: rgba(255, 255, 255, 0.95);
+  outline: 1px dashed #ccc;
+}
+
+.buyoff-name-input {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dark, #333);
+  text-align: center;
+  width: 76px;
+  border: 1px solid var(--mahindra-red, #c0392b);
+  border-radius: 3px;
+  padding: 1px 4px;
+  background: #fff;
+  outline: none;
+  line-height: 1.4;
+}
