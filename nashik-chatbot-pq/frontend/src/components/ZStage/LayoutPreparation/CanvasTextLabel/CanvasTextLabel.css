@@ -1,0 +1,161 @@
+/* ── Wrapper ──────────────────────────────────────────────────────────────────
+   Invisible by default when it has content — only shows on hover/select.
+   Dashed border shown when the box is empty (newly placed, not yet typed).    */
+
+.ctl-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  box-sizing: border-box;
+  border: 1.5px solid transparent;
+  border-radius: 4px;
+  user-select: none;
+  cursor: grab;
+}
+
+.ctl-wrap:active {
+  cursor: grabbing;
+}
+
+/* Subtle hint on hover (content present) */
+.ctl-wrap:hover {
+  border-color: rgba(49, 130, 206, 0.35);
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Empty box (no text yet): clearly visible dashed blue border */
+.ctl-wrap--empty {
+  border: 2px dashed #3182ce;
+  background: rgba(235, 248, 255, 0.85);
+  box-shadow: 0 0 0 1px rgba(49, 130, 206, 0.15);
+}
+
+.ctl-wrap--empty:hover {
+  border-color: #2b6cb0;
+  background: rgba(235, 248, 255, 0.95);
+}
+
+/* ── Selected state ─────────────────────────────────────────────────────── */
+.ctl-wrap--sel {
+  border: 1.5px solid #3182ce !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.2);
+  cursor: default;
+}
+
+/* ── Textarea — fills full box ────────────────────────────────────────────── */
+.ctl-ta {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  /* font-size is set inline and scales with box height */
+  font-weight: 700;
+  font-family: inherit;
+  color: #1a202c;
+  line-height: 1.4;
+  padding: 6px 8px;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.ctl-ta::placeholder {
+  color: #a0aec0;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 10px;
+}
+
+.ctl-ta:read-only {
+  cursor: grab;
+}
+
+/* ── Floating toolbar (OK + Delete, floats above the box) ────────────────── */
+.ctl-toolbar {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 5px;
+  padding: 3px 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 20;
+  white-space: nowrap;
+  pointer-events: all;
+}
+
+.ctl-ok {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: #3182ce;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1;
+  font-family: inherit;
+}
+
+.ctl-ok:hover { background: #2b6cb0; }
+
+.ctl-del {
+  display: flex;
+  align-items: center;
+  padding: 3px 6px;
+  color: #e53e3e;
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.ctl-del:hover { background: #fed7d7; }
+
+/* ── Resize handles (8 dots) ──────────────────────────────────────────────── */
+.ctl-rz {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border: 1.5px solid #3182ce;
+  border-radius: 50%;
+  z-index: 15;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+/* Visible on hover and when selected */
+.ctl-wrap:hover .ctl-rz,
+.ctl-wrap--sel .ctl-rz {
+  opacity: 1;
+}
+
+/* Corners */
+.ctl-rz--nw { top: -4px;    left: -4px;                              }
+.ctl-rz--ne { top: -4px;    right: -4px;                             }
+.ctl-rz--se { bottom: -4px; right: -4px;                             }
+.ctl-rz--sw { bottom: -4px; left: -4px;                              }
+
+/* Edges */
+.ctl-rz--n  { top: -4px;    left: 50%; transform: translateX(-50%); }
+.ctl-rz--s  { bottom: -4px; left: 50%; transform: translateX(-50%); }
+.ctl-rz--e  { right: -4px;  top: 50%;  transform: translateY(-50%); }
+.ctl-rz--w  { left: -4px;   top: 50%;  transform: translateY(-50%); }

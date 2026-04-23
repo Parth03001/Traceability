@@ -266,7 +266,7 @@
 .dash-box-desc {
   display: block;
   width: 100%;
-  font-size: 4px;
+  font-size: 9px;
   font-weight: 500;
   color: var(--text-gray);
   background-color: #ebebeb;

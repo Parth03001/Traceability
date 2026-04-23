@@ -15,9 +15,12 @@ function ZStage() {
   // ── Layout Preparation state lifted to App so Sidebar can trigger it ────────
   const [showAddBoxModal, setShowAddBoxModal] = useState(false);
   const [addBuyoffSignal, setAddBuyoffSignal] = useState(0);
+  const [addTextSignal, setAddTextSignal] = useState(0);
+  const [addArrowSignal, setAddArrowSignal] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [savedLayouts, setSavedLayouts] = useState([]);
   const [activeLayoutId, setActiveLayoutId] = useState(null); // currently loaded layout
+  const [layoutSaveSignal, setLayoutSaveSignal] = useState(0);
 
   const saveHandlerRef = useRef(null);
   const loadHandlerRef = useRef(null);
@@ -77,7 +80,10 @@ function ZStage() {
           local_id: `dup-buyoff-${ic.id}`,
           position_x: ic.position_x,
           position_y: ic.position_y,
+          name: ic.name || '',
         })),
+        text_labels: src.text_labels || '[]',
+        canvas_arrows: src.canvas_arrows || '[]',
         connections: (src.connections || []).map((c) => {
           const fromBase = c.from_box_id != null ? `dup-${c.from_box_id}` : `dup-buyoff-${c.from_buyoff_id}`;
           const toBase   = c.to_box_id   != null ? `dup-${c.to_box_id}`   : `dup-buyoff-${c.to_buyoff_id}`;
@@ -117,6 +123,8 @@ function ZStage() {
   const layoutActions = {
     onAddBox: () => setShowAddBoxModal(true),
     onAddBuyoff: () => setAddBuyoffSignal((s) => s + 1),
+    onAddText: () => setAddTextSignal((s) => s + 1),
+    onAddArrow: () => setAddArrowSignal((s) => s + 1),
     onSaveLayout: handleSaveLayout,
     onLoadLayout: handleLoadLayout,
     onCopyLayout: handleCopyLayout,
@@ -144,9 +152,13 @@ function ZStage() {
             showAddBoxModal={showAddBoxModal}
             onCloseAddBoxModal={() => setShowAddBoxModal(false)}
             addBuyoffSignal={addBuyoffSignal}
+            addTextSignal={addTextSignal}
+            addArrowSignal={addArrowSignal}
             onSaveLayout={(fn) => { saveHandlerRef.current = fn; }}
             onLoadLayout={(fn) => { loadHandlerRef.current = fn; }}
             onCopyLayout={(fn) => { copyHandlerRef.current = fn; }}
+            onSaved={() => setLayoutSaveSignal((s) => s + 1)}
+            savedLayouts={savedLayouts}
             userId={userId}
           />
         )}
@@ -154,7 +166,11 @@ function ZStage() {
           <InputData userId={userId} layouts={savedLayouts} />
         )}
         {activeSection === 'dashboard' && (
-          <ZStageDashboard userId={userId} />
+          <ZStageDashboard
+            userId={userId}
+            activeLayoutId={activeLayoutId}
+            refreshSignal={layoutSaveSignal}
+          />
         )}
       </main>
     </div>

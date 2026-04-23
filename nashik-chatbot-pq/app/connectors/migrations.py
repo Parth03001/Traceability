@@ -66,6 +66,12 @@ COLUMN_MIGRATIONS = [
     "CREATE INDEX IF NOT EXISTS idx_station_docs_station_id ON station_documents (station_id)",
     "CREATE INDEX IF NOT EXISTS idx_station_docs_layout_id ON station_documents (layout_id)",
     "CREATE INDEX IF NOT EXISTS idx_station_docs_concern_id ON station_documents (concern_id)",
+    # buyoff icon label
+    "ALTER TABLE buyoff_icons ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT ''",
+    # canvas text labels stored as JSON array in the layout row
+    "ALTER TABLE layouts ADD COLUMN IF NOT EXISTS text_labels TEXT DEFAULT '[]'",
+    # canvas arrow elements stored as JSON array in the layout row
+    "ALTER TABLE layouts ADD COLUMN IF NOT EXISTS canvas_arrows TEXT DEFAULT '[]'",
 ]
 
 

@@ -1019,7 +1019,17 @@ function parseLayout(apiLayout) {
     ? buyoffIcons.map((ic) => ({ ...ic, position: { x: ic.position.x + shiftX, y: ic.position.y + shiftY } }))
     : buyoffIcons;
 
-  return { boxes: shiftedBoxes, buyoffIcons: shiftedBuyoff, connections };
+  let textLabels = [];
+  try {
+    textLabels = apiLayout.text_labels ? JSON.parse(apiLayout.text_labels) : [];
+  } catch { textLabels = []; }
+
+  let canvasArrows = [];
+  try {
+    canvasArrows = apiLayout.canvas_arrows ? JSON.parse(apiLayout.canvas_arrows) : [];
+  } catch { canvasArrows = []; }
+
+  return { boxes: shiftedBoxes, buyoffIcons: shiftedBuyoff, connections, textLabels, canvasArrows };
 }
 
 // ── Compute display data for one station ──────────────────────────────────────
@@ -1214,12 +1224,14 @@ function LegendBox({ legendData, position, transformScale, onDragEnd }) {
 }
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
-function ZStageDashboard({ userId }) {
+function ZStageDashboard({ userId, activeLayoutId = null, refreshSignal = 0 }) {
   const [layouts, setLayouts]         = useState([]);
   const [selectedId, setSelectedId]   = useState(null);
   const [boxes, setBoxes]             = useState([]);
   const [buyoffIcons, setBuyoffIcons] = useState([]);
   const [connections, setConnections] = useState([]);
+  const [textLabels, setTextLabels]   = useState([]);
+  const [canvasArrows, setCanvasArrows] = useState([]);
   const [records, setRecords]         = useState([]);
   const [auditRecords, setAuditRecords]       = useState([]);
   const [adherenceRecords, setAdherenceRecords] = useState([]);
@@ -1288,19 +1300,24 @@ function ZStageDashboard({ userId }) {
     return Array.from(set).sort();
   }, [records]);
 
-  // Load layout list + input records on mount
+  // Load layout list on mount; prefer the layout that's active in the editor
   useEffect(() => {
     layoutApi.getLayouts(userId)
       .then((r) => {
         const list = Array.isArray(r.data) ? r.data : [];
         setLayouts(list);
-        if (list.length > 0) setSelectedId(list[0].id);
-        else setError('No layouts found. Create and save a layout first.');
+        if (list.length === 0) {
+          setError('No layouts found. Create and save a layout first.');
+          return;
+        }
+        // Auto-select the layout currently open in the editor, else first in list
+        const preferred = activeLayoutId && list.find((l) => l.id === activeLayoutId);
+        setSelectedId(preferred ? preferred.id : list[0].id);
       })
       .catch(() => {
         setError('Failed to load layouts — check backend is running on port 5000');
       });
-  }, [userId]);
+  }, [userId]); // eslint-disable-line
 
   // Load layout + records when selection changes
   useEffect(() => {
@@ -1319,6 +1336,8 @@ function ZStageDashboard({ userId }) {
         setBoxes(state.boxes);
         setBuyoffIcons(state.buyoffIcons);
         setConnections(state.connections);
+        setTextLabels(state.textLabels || []);
+        setCanvasArrows(state.canvasArrows || []);
         setRecords(Array.isArray(recordsRes.data) ? recordsRes.data : []);
         setAuditRecords(Array.isArray(auditRes.data) ? auditRes.data : []);
         setAdherenceRecords(Array.isArray(adherenceRes.data) ? adherenceRes.data : []);
@@ -1357,6 +1376,8 @@ function ZStageDashboard({ userId }) {
           setBoxes(state.boxes);
           setBuyoffIcons(state.buyoffIcons);
           setConnections(state.connections);
+          setTextLabels(state.textLabels || []);
+          setCanvasArrows(state.canvasArrows || []);
         })
       );
     }
@@ -1381,6 +1402,18 @@ function ZStageDashboard({ userId }) {
 
   // Legend data derived from all records
   const legendData = React.useMemo(() => computeLegendData(records), [records]);
+
+  // Mirror handleRefresh so the signal effect always calls the latest version
+  const handleRefreshRef = useRef(null);
+  handleRefreshRef.current = handleRefresh;
+
+  // Auto-refresh when a layout save completes in the editor
+  const prevSignalRef = useRef(0);
+  useEffect(() => {
+    if (refreshSignal <= 0 || refreshSignal === prevSignalRef.current) return;
+    prevSignalRef.current = refreshSignal;
+    if (selectedId) handleRefreshRef.current?.();
+  }, [refreshSignal, selectedId]);
 
   // Drag callback: update position live; auto-save to DB on commit
   const handleLegendDrag = useCallback((newPos, commit) => {
@@ -1499,6 +1532,69 @@ function ZStageDashboard({ userId }) {
                           </div>
                         </div>
                       ))}
+
+                      {/* Text labels — read-only mirror of layout editor */}
+                      {textLabels.map((tl) => (
+                        tl.text ? (
+                          <div
+                            key={tl.id}
+                            style={{
+                              position: 'absolute',
+                              left: tl.x,
+                              top: tl.y,
+                              width: tl.w || 160,
+                              height: tl.h || 56,
+                              fontSize: Math.max(7, Math.round((tl.h || 56) * 0.22)),
+                              padding: '4px 6px',
+                              boxSizing: 'border-box',
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                              pointerEvents: 'none',
+                              background: 'transparent',
+                              borderRadius: 4,
+                              color: '#2c3e50',
+                              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {tl.text}
+                          </div>
+                        ) : null
+                      ))}
+
+                      {/* Canvas arrows — read-only mirror of layout editor */}
+                      {canvasArrows.map((arrow) => {
+                        const w = arrow.w || 120;
+                        const h = arrow.h || 50;
+                        const degMap = { right: 0, down: 90, left: 180, up: 270 };
+                        const deg = degMap[arrow.direction] || 0;
+                        return (
+                          <div
+                            key={arrow.id}
+                            style={{ position: 'absolute', left: arrow.x, top: arrow.y, width: w, height: h, pointerEvents: 'none' }}
+                          >
+                            <svg width={w} height={h} viewBox="0 0 100 100" preserveAspectRatio="none">
+                              <polygon
+                                points="0,30 62,30 62,8 100,50 62,92 62,70 0,70"
+                                fill="#38a169"
+                                opacity="0.82"
+                                style={{ transform: `rotate(${deg}deg)`, transformOrigin: '50px 50px', transformBox: 'fill-box' }}
+                              />
+                            </svg>
+                            {arrow.label && (
+                              <div style={{
+                                position: 'absolute', inset: 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: Math.max(7, Math.round(Math.min(w, h) * 0.22)),
+                                color: '#fff', fontWeight: 600, textAlign: 'center',
+                                padding: '0 6px', pointerEvents: 'none', lineHeight: 1.2,
+                              }}>
+                                {arrow.label}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
 
                       {/* Legend box – draggable, scales with canvas zoom */}
                       {legendPos && (

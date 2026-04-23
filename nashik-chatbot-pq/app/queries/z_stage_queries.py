@@ -38,14 +38,14 @@ class QueryValidator:
 
 class LayoutQueries:
     LIST_LAYOUTS = """
-        SELECT id, name, user_id, legend_position_x, legend_position_y, created_at, updated_at
+        SELECT id, name, user_id, legend_position_x, legend_position_y, text_labels, canvas_arrows, created_at, updated_at
         FROM layouts
         WHERE (:user_id IS NULL OR user_id = :user_id)
         ORDER BY created_at DESC
     """
 
     GET_LAYOUT = """
-        SELECT id, name, user_id, legend_position_x, legend_position_y, created_at, updated_at
+        SELECT id, name, user_id, legend_position_x, legend_position_y, text_labels, canvas_arrows, created_at, updated_at
         FROM layouts
         WHERE id = :layout_id
     """
@@ -53,7 +53,7 @@ class LayoutQueries:
     CREATE_LAYOUT = """
         INSERT INTO layouts (name, user_id, created_at, updated_at)
         VALUES (:name, :user_id, NOW(), NOW())
-        RETURNING id, name, user_id, legend_position_x, legend_position_y, created_at, updated_at
+        RETURNING id, name, user_id, legend_position_x, legend_position_y, text_labels, canvas_arrows, created_at, updated_at
     """
 
     UPDATE_LAYOUT = """
@@ -61,9 +61,11 @@ class LayoutQueries:
         SET name               = COALESCE(:name, name),
             legend_position_x  = COALESCE(:legend_position_x, legend_position_x),
             legend_position_y  = COALESCE(:legend_position_y, legend_position_y),
+            text_labels        = COALESCE(:text_labels, text_labels),
+            canvas_arrows      = COALESCE(:canvas_arrows, canvas_arrows),
             updated_at         = NOW()
         WHERE id = :layout_id
-        RETURNING id, name, user_id, legend_position_x, legend_position_y, created_at, updated_at
+        RETURNING id, name, user_id, legend_position_x, legend_position_y, text_labels, canvas_arrows, created_at, updated_at
     """
 
     DELETE_LAYOUT = "DELETE FROM layouts WHERE id = :layout_id"
@@ -126,30 +128,31 @@ class StationBoxQueries:
 
 class BuyoffIconQueries:
     LIST_BY_LAYOUT = """
-        SELECT id, layout_id, position_x, position_y, created_at
+        SELECT id, layout_id, position_x, position_y, name, created_at
         FROM buyoff_icons
         WHERE layout_id = :layout_id
         ORDER BY id
     """
 
     GET_ICON = """
-        SELECT id, layout_id, position_x, position_y, created_at
+        SELECT id, layout_id, position_x, position_y, name, created_at
         FROM buyoff_icons
         WHERE id = :icon_id
     """
 
     CREATE_ICON = """
-        INSERT INTO buyoff_icons (layout_id, position_x, position_y, created_at)
-        VALUES (:layout_id, :position_x, :position_y, NOW())
-        RETURNING id, layout_id, position_x, position_y, created_at
+        INSERT INTO buyoff_icons (layout_id, position_x, position_y, name, created_at)
+        VALUES (:layout_id, :position_x, :position_y, :name, NOW())
+        RETURNING id, layout_id, position_x, position_y, name, created_at
     """
 
     UPDATE_ICON = """
         UPDATE buyoff_icons
         SET position_x = COALESCE(:position_x, position_x),
-            position_y = COALESCE(:position_y, position_y)
+            position_y = COALESCE(:position_y, position_y),
+            name       = COALESCE(:name,       name)
         WHERE id = :icon_id
-        RETURNING id, layout_id, position_x, position_y, created_at
+        RETURNING id, layout_id, position_x, position_y, name, created_at
     """
 
     DELETE_ICON = "DELETE FROM buyoff_icons WHERE id = :icon_id"

@@ -57,6 +57,7 @@ def create_buyoff_icon(
             "layout_id": layout_id,
             "position_x": payload.position_x,
             "position_y": payload.position_y,
+            "name": payload.name or "",
         },
     )
     if not rows:
@@ -83,6 +84,7 @@ def update_buyoff_icon(
             "icon_id": icon_id,
             "position_x": data.get("position_x"),
             "position_y": data.get("position_y"),
+            "name": data.get("name"),
         },
     )
     if not rows:

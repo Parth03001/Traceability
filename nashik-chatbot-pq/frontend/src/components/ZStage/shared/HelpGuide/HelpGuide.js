@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import Draggable from 'react-draggable';
 import { X, HelpCircle } from 'lucide-react';
 import './HelpGuide.css';
 
-/**
- * HelpGuide — Floating "?" button + slide-in guide panel.
- *
- * Props:
- *   title   — page title shown at top of panel
- *   sections — array of { heading, items: [{ icon, label, desc }] }
- */
+const STORAGE_KEY = 'help-fab-pos';
+
 function HelpGuide({ title, sections = [] }) {
   const [open, setOpen] = useState(false);
-  const panelRef = useRef(null);
+  const [fabPos, setFabPos] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : { x: 0, y: 0 };
+    } catch { return { x: 0, y: 0 }; }
+  });
+
+  const panelRef   = useRef(null);
+  const fabRef     = useRef(null);
+  const didDragRef = useRef(false);
 
   // Close on Escape key
   useEffect(() => {
@@ -22,28 +27,45 @@ function HelpGuide({ title, sections = [] }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  // Close on click outside the panel
+  // Close panel on click outside
   useEffect(() => {
     if (!open) return;
     const onClick = (e) => {
       if (panelRef.current && !panelRef.current.contains(e.target)) setOpen(false);
     };
-    // Small timeout so the opening click doesn't immediately close it
     const t = setTimeout(() => document.addEventListener('mousedown', onClick), 50);
     return () => { clearTimeout(t); document.removeEventListener('mousedown', onClick); };
   }, [open]);
 
   return createPortal(
     <>
-      {/* Floating trigger button */}
-      <button
-        className={`help-fab${open ? ' help-fab--active' : ''}`}
-        onClick={() => setOpen((v) => !v)}
-        title="Help / Guide"
-        aria-label="Open help guide"
+      {/* ── Draggable floating "?" button ────────────────────────────────── */}
+      <Draggable
+        nodeRef={fabRef}
+        position={fabPos}
+        onStart={() => { didDragRef.current = false; }}
+        onDrag={(e, data) => {
+          didDragRef.current = true;
+          setFabPos({ x: data.x, y: data.y });
+        }}
+        onStop={(e, data) => {
+          if (didDragRef.current) {
+            const pos = { x: data.x, y: data.y };
+            setFabPos(pos);
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pos)); } catch {}
+          }
+        }}
       >
-        <HelpCircle size={20} />
-      </button>
+        <button
+          ref={fabRef}
+          className={`help-fab${open ? ' help-fab--active' : ''}`}
+          onClick={() => { if (!didDragRef.current) setOpen((v) => !v); }}
+          title="Help / Guide — drag to reposition"
+          aria-label="Open help guide"
+        >
+          <HelpCircle size={20} />
+        </button>
+      </Draggable>
 
       {/* Backdrop */}
       {open && <div className="help-backdrop" />}

@@ -4,6 +4,8 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Pencil, LayoutGrid, Trash2, ZoomIn, ZoomOut, Maximize2, Check, Cloud, AlertCircle, X } from 'lucide-react';
 import StationBox from './StationBox/StationBox';
 import BuyoffIcon from './BypassIcon/BypassIcon';
+import CanvasTextLabel from './CanvasTextLabel/CanvasTextLabel';
+import CanvasArrow from './CanvasArrow/CanvasArrow';
 import AddBoxModal from './AddBoxModal/AddBoxModal';
 import { layoutApi } from '../../../services/api/layoutApi';
 import { getPortCanvasPos, buildObstacles, routePath } from '../shared/routeArrow';
@@ -17,7 +19,9 @@ const LAYOUT_HELP = {
       heading: 'Getting Started',
       items: [
         { icon: '➕', label: 'Add Box',         desc: 'Click "Add Box" in the sidebar to create a new station group. Enter a name, choose station IDs (Auto, Range, or Custom), and optionally add station names.' },
-        { icon: '💎', label: 'Add Buyoff',      desc: 'Click "Add Buyoff" in the sidebar to drop a diamond-shaped buyoff / bypass icon onto the canvas.' },
+        { icon: '💎', label: 'Add Buyoff',      desc: 'Click "Add Buyoff" in the sidebar to drop a diamond-shaped buyoff / bypass icon onto the canvas. Drag it to reposition; expand the diamond to connect ports or remove it.' },
+        { icon: '🔤', label: 'Add Text',        desc: 'Click "Add Text" in the sidebar to place a free text box anywhere on the canvas. Drag to move, resize from the corner/edge handles, and double-click to edit the text. An empty text box is auto-removed on click-away.' },
+        { icon: '➡️', label: 'Add Arrow',       desc: 'Click "Add Arrow" in the sidebar to place a broad directional arrow on the canvas. Drag to move, resize from the handles, click to reveal a toolbar where you can rotate the arrow 90° or add a label.' },
         { icon: '💾', label: 'Save Layout',     desc: 'Click "Save Layout" in the sidebar to manually save the current state. Changes are also auto-saved after 1.5 s — the cloud indicator in the toolbar shows Saved / Saving / Pending.' },
       ],
     },
@@ -69,6 +73,15 @@ const LAYOUT_HELP = {
   ],
 };
 
+// Returns the first name not already present in savedLayouts: 'New Layout', then 'New Layout 1', '2', …
+function uniqueLayoutName(base, savedLayouts) {
+  const names = new Set((savedLayouts || []).map((l) => l.name));
+  if (!names.has(base)) return base;
+  let n = 1;
+  while (names.has(`${base} ${n}`)) n++;
+  return `${base} ${n}`;
+}
+
 let nextId = 1;
 const uid = () => `loc-${nextId++}`;
 
@@ -84,6 +97,36 @@ const boxSize = (stationCount) => ({
 });
 
 const snap = (v) => Math.round(v / GRID) * GRID;
+
+// Find the nearest grid-aligned spot to (baseCx, baseCy) that doesn't overlap any box
+const findClearSpot = (baseCx, baseCy, w, h, boxes) => {
+  const PAD = GRID;
+  for (let r = 0; r <= 20; r++) {
+    const candidates = r === 0
+      ? [{ x: baseCx, y: baseCy }]
+      : [
+          { x: baseCx,             y: baseCy - r * GRID },
+          { x: baseCx,             y: baseCy + r * GRID },
+          { x: baseCx - r * GRID,  y: baseCy            },
+          { x: baseCx + r * GRID,  y: baseCy            },
+          { x: baseCx - r * GRID,  y: baseCy - r * GRID },
+          { x: baseCx + r * GRID,  y: baseCy - r * GRID },
+          { x: baseCx - r * GRID,  y: baseCy + r * GRID },
+          { x: baseCx + r * GRID,  y: baseCy + r * GRID },
+        ];
+    for (const { x, y } of candidates) {
+      if (x < GRID || y < GRID) continue;
+      const clear = boxes.every((b) => {
+        const bw = Math.max(2, b.stationIds?.length ?? 2) * GRID + 4;
+        const bh = 5 * GRID;
+        return (x + w + PAD <= b.position.x || b.position.x + bw + PAD <= x ||
+                y + h + PAD <= b.position.y || b.position.y + bh + PAD <= y);
+      });
+      if (clear) return { x, y };
+    }
+  }
+  return { x: Math.max(GRID, baseCx), y: Math.max(GRID, baseCy) };
+};
 
 // Bypass icon is 62×62px — snap so its visual center lands on a grid intersection
 const BYPASS_SIZE = 62;
@@ -176,7 +219,20 @@ function stateFromApi(apiLayout) {
     id: `db-buyoff-${ic.id}`,
     dbId: ic.id,
     position: { x: ic.position_x, y: ic.position_y },
+    name: ic.name || '',
   }));
+
+  let textLabels = [];
+  try {
+    const raw = apiLayout.text_labels;
+    textLabels = raw ? JSON.parse(raw) : [];
+  } catch { textLabels = []; }
+
+  let canvasArrows = [];
+  try {
+    const raw = apiLayout.canvas_arrows;
+    canvasArrows = raw ? JSON.parse(raw) : [];
+  } catch { canvasArrows = []; }
 
   const connections = (apiLayout.connections || []).map((c) => {
     let fromId, toId;
@@ -211,20 +267,34 @@ function stateFromApi(apiLayout) {
     ? buyoffIcons.map((ic) => ({ ...ic, position: { x: ic.position.x + shiftX, y: ic.position.y + shiftY } }))
     : buyoffIcons;
 
-  return { boxes: shiftedBoxes, buyoffIcons: shiftedBuyoff, connections };
+  const shiftedTextLabels = shiftX || shiftY
+    ? textLabels.map((tl) => ({ ...tl, x: tl.x + shiftX, y: tl.y + shiftY }))
+    : textLabels;
+
+  const shiftedArrows = shiftX || shiftY
+    ? canvasArrows.map((a) => ({ ...a, x: a.x + shiftX, y: a.y + shiftY }))
+    : canvasArrows;
+
+  return { boxes: shiftedBoxes, buyoffIcons: shiftedBuyoff, connections, textLabels: shiftedTextLabels, canvasArrows: shiftedArrows };
 }
 
 function LayoutPreparation({
   showAddBoxModal,
   onCloseAddBoxModal,
   addBuyoffSignal,
+  addTextSignal,
+  addArrowSignal,
   onSaveLayout,
   onLoadLayout,
   onCopyLayout,
+  onSaved,
+  savedLayouts = [],
   userId,
 }) {
   const [boxes, setBoxes] = useState([]);
   const [buyoffIcons, setBuyoffIcons] = useState([]);
+  const [textLabels, setTextLabels] = useState([]);
+  const [canvasArrows, setCanvasArrows] = useState([]);
   const [connections, setConnections] = useState([]);
   const [layoutName, setLayoutName] = useState('New Layout');
   const [editingName, setEditingName] = useState(false);
@@ -246,6 +316,8 @@ function LayoutPreparation({
   const isLoadingRef       = useRef(false);
   const nameModalShownRef  = useRef(false); // show name modal only once per new layout
   const isDirtyRef         = useRef(false);
+  const savedLayoutsRef    = useRef(savedLayouts);
+  useEffect(() => { savedLayoutsRef.current = savedLayouts; }, [savedLayouts]);
   const handleSaveRef      = useRef(null);  // always points to latest handleSave
 
   // ── Undo / Redo history ───────────────────────────────────────────────────────
@@ -255,13 +327,24 @@ function LayoutPreparation({
   const boxesRef      = useRef([]);
   const buyoffRef     = useRef([]);
   const connsRef      = useRef([]);
-  useEffect(() => { boxesRef.current  = boxes;       }, [boxes]);
-  useEffect(() => { buyoffRef.current = buyoffIcons; }, [buyoffIcons]);
-  useEffect(() => { connsRef.current  = connections; }, [connections]);
+  const textLabelsRef    = useRef([]);
+  const canvasArrowsRef  = useRef([]);
+  const transformStateRef = useRef({ scale: 1, positionX: 0, positionY: 0 });
+  useEffect(() => { boxesRef.current         = boxes;        }, [boxes]);
+  useEffect(() => { buyoffRef.current        = buyoffIcons;  }, [buyoffIcons]);
+  useEffect(() => { connsRef.current         = connections;  }, [connections]);
+  useEffect(() => { textLabelsRef.current    = textLabels;   }, [textLabels]);
+  useEffect(() => { canvasArrowsRef.current  = canvasArrows; }, [canvasArrows]);
+  useEffect(() => { transformStateRef.current = transformState; }, [transformState]);
+
+  // Notify parent whenever any save completes (auto-save, manual, name-modal)
+  const onSavedRef = useRef(onSaved);
+  useEffect(() => { onSavedRef.current = onSaved; }, [onSaved]);
+  useEffect(() => { if (autoSaveStatus === 'saved') onSavedRef.current?.(); }, [autoSaveStatus]);
 
   // Call BEFORE any mutation to snapshot the current state
   const pushHistory = useCallback(() => {
-    const snap = { boxes: boxesRef.current, buyoffIcons: buyoffRef.current, connections: connsRef.current };
+    const snap = { boxes: boxesRef.current, buyoffIcons: buyoffRef.current, connections: connsRef.current, textLabels: textLabelsRef.current, canvasArrows: canvasArrowsRef.current };
     undoStackRef.current = [...undoStackRef.current.slice(-49), snap];
     redoStackRef.current = [];
   }, []);
@@ -275,13 +358,15 @@ function LayoutPreparation({
     const prev = undoStackRef.current[undoStackRef.current.length - 1];
     undoStackRef.current = undoStackRef.current.slice(0, -1);
     redoStackRef.current = [
-      { boxes: boxesRef.current, buyoffIcons: buyoffRef.current, connections: connsRef.current },
+      { boxes: boxesRef.current, buyoffIcons: buyoffRef.current, connections: connsRef.current, textLabels: textLabelsRef.current, canvasArrows: canvasArrowsRef.current },
       ...redoStackRef.current.slice(0, 49),
     ];
     isLoadingRef.current = true;
     setBoxes(prev.boxes);
     setBuyoffIcons(prev.buyoffIcons);
     setConnections(prev.connections);
+    setTextLabels(prev.textLabels || []);
+    setCanvasArrows(prev.canvasArrows || []);
     setTimeout(() => { isLoadingRef.current = false; }, 50);
   }, []);
 
@@ -291,12 +376,14 @@ function LayoutPreparation({
     redoStackRef.current = redoStackRef.current.slice(1);
     undoStackRef.current = [
       ...undoStackRef.current.slice(-49),
-      { boxes: boxesRef.current, buyoffIcons: buyoffRef.current, connections: connsRef.current },
+      { boxes: boxesRef.current, buyoffIcons: buyoffRef.current, connections: connsRef.current, textLabels: textLabelsRef.current, canvasArrows: canvasArrowsRef.current },
     ];
     isLoadingRef.current = true;
     setBoxes(next.boxes);
     setBuyoffIcons(next.buyoffIcons);
     setConnections(next.connections);
+    setTextLabels(next.textLabels || []);
+    setCanvasArrows(next.canvasArrows || []);
     setTimeout(() => { isLoadingRef.current = false; }, 50);
   }, []);
 
@@ -463,6 +550,18 @@ function LayoutPreparation({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addBuyoffSignal]);
 
+  // Add text label when parent signals it
+  useEffect(() => {
+    if (addTextSignal > 0) handleAddTextLabel();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addTextSignal]);
+
+  // Add arrow when parent signals it
+  useEffect(() => {
+    if (addArrowSignal > 0) handleAddArrow();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addArrowSignal]);
+
   // ── Box actions ─────────────────────────────────────────────────────────────
   const handleAddBox = useCallback((boxData) => {
     pushHistory();
@@ -628,9 +727,80 @@ function LayoutPreparation({
     const id = uid();
     setBuyoffIcons((prev) => [
       ...prev,
-      { id, dbId: null, position: { x: snapBypass(GRID + prev.length * GRID * 2), y: snapBypass(GRID) } },
+      { id, dbId: null, position: { x: snapBypass(GRID + prev.length * GRID * 2), y: snapBypass(GRID) }, name: '' },
     ]);
   }, []);
+
+  const handleBuyoffNameChange = useCallback((id, newName) => {
+    setBuyoffIcons((prev) => prev.map((b) => (b.id === id ? { ...b, name: newName } : b)));
+  }, []);
+
+  // ── Text label actions ──────────────────────────────────────────────────────
+  const handleAddTextLabel = useCallback(() => {
+    pushHistory();
+    const id = uid();
+    const { positionX, positionY, scale } = transformStateRef.current;
+    const cw = canvasRef.current?.clientWidth  || 800;
+    const ch = canvasRef.current?.clientHeight || 600;
+    const W = 160, H = 56;
+    const baseCx = Math.max(GRID, Math.round((-positionX + cw / 2) / scale) - W / 2);
+    const baseCy = Math.max(GRID, Math.round((-positionY + ch / 2) / scale) - H / 2);
+    const { x, y } = findClearSpot(baseCx, baseCy, W, H, boxesRef.current);
+    setTextLabels((prev) => [...prev, { id, text: '', x, y, w: W, h: H }]);
+  }, [pushHistory]);
+
+  const handleTextLabelPositionChange = useCallback((id, pos) => {
+    setTextLabels((prev) => prev.map((t) => (t.id === id ? { ...t, x: pos.x, y: pos.y } : t)));
+  }, []);
+
+  const handleTextLabelSizeChange = useCallback((id, newSize) => {
+    setTextLabels((prev) => prev.map((t) => (t.id === id ? { ...t, w: newSize.w, h: newSize.h } : t)));
+  }, []);
+
+  const handleTextLabelTextChange = useCallback((id, text) => {
+    setTextLabels((prev) => prev.map((t) => (t.id === id ? { ...t, text } : t)));
+  }, []);
+
+  const handleDeleteTextLabel = useCallback((id) => {
+    pushHistory();
+    setTextLabels((prev) => prev.filter((t) => t.id !== id));
+  }, [pushHistory]);
+
+  // ── Canvas arrow actions ────────────────────────────────────────────────────
+  const handleAddArrow = useCallback(() => {
+    pushHistory();
+    const id = uid();
+    const { positionX, positionY, scale } = transformStateRef.current;
+    const cw = canvasRef.current?.clientWidth  || 800;
+    const ch = canvasRef.current?.clientHeight || 600;
+    const W = 120, H = 50;
+    // Offset base slightly below centre so text and arrow don't land on the same spot
+    const baseCx = Math.max(GRID, Math.round((-positionX + cw / 2) / scale) - W / 2);
+    const baseCy = Math.max(GRID, Math.round((-positionY + ch / 2) / scale) + 2 * GRID);
+    const { x, y } = findClearSpot(baseCx, baseCy, W, H, boxesRef.current);
+    setCanvasArrows((prev) => [...prev, { id, direction: 'right', label: '', x, y, w: W, h: H }]);
+  }, [pushHistory]);
+
+  const handleArrowSizeChange = useCallback((id, newSize) => {
+    setCanvasArrows((prev) => prev.map((a) => (a.id === id ? { ...a, w: newSize.w, h: newSize.h } : a)));
+  }, []);
+
+  const handleArrowPositionChange = useCallback((id, pos) => {
+    setCanvasArrows((prev) => prev.map((a) => (a.id === id ? { ...a, x: pos.x, y: pos.y } : a)));
+  }, []);
+
+  const handleArrowDirectionChange = useCallback((id, direction) => {
+    setCanvasArrows((prev) => prev.map((a) => (a.id === id ? { ...a, direction } : a)));
+  }, []);
+
+  const handleArrowLabelChange = useCallback((id, label) => {
+    setCanvasArrows((prev) => prev.map((a) => (a.id === id ? { ...a, label } : a)));
+  }, []);
+
+  const handleDeleteArrow = useCallback((id) => {
+    pushHistory();
+    setCanvasArrows((prev) => prev.filter((a) => a.id !== id));
+  }, [pushHistory]);
 
   const handleBuyoffPositionChange = useCallback((id, rawPos) => {
     pushHistory();
@@ -652,8 +822,16 @@ function LayoutPreparation({
 
   // ── Save layout ─────────────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
+    // For new layouts, ensure the name is unique (guards against modal-cancel → manual save)
+    const nameToSave = !currentLayoutId
+      ? uniqueLayoutName(layoutName || 'New Layout', savedLayoutsRef.current)
+      : layoutName;
+    if (nameToSave !== layoutName) setLayoutName(nameToSave);
+
     const payload = {
-      name: layoutName,
+      name: nameToSave,
+      text_labels: JSON.stringify(textLabels.map(({ id, text, x, y, w, h }) => ({ id, text, x, y, w, h }))),
+      canvas_arrows: JSON.stringify(canvasArrows.map(({ id, direction, label, x, y, w, h }) => ({ id, direction, label, x, y, w, h }))),
       boxes: boxes.map((b) => ({
         local_id: b.id,
         name: b.name,
@@ -673,6 +851,7 @@ function LayoutPreparation({
         local_id: ic.id,
         position_x: ic.position.x,
         position_y: ic.position.y,
+        name: ic.name || '',
       })),
       connections: connections.map((c) => ({
         from_local_id: c.fromId,
@@ -680,6 +859,8 @@ function LayoutPreparation({
       })),
     };
 
+    // Clear dirty before async — any mutation during save will set it back to true
+    isDirtyRef.current = false;
     try {
       let response;
       if (currentLayoutId) {
@@ -688,22 +869,39 @@ function LayoutPreparation({
         response = await layoutApi.createSnapshot(payload, userId);
       }
       const saved = response.data;
-      // Suppress auto-save re-trigger while we apply the server response
-      isLoadingRef.current = true;
       setCurrentLayoutId(saved.id);
-      const rebuilt = stateFromApi(saved);
-      setBoxes(rebuilt.boxes);
-      setBuyoffIcons(rebuilt.buyoffIcons);
-      setConnections(rebuilt.connections);
-      setLayoutName(saved.name);
-      isDirtyRef.current = false;
-      setTimeout(() => { isLoadingRef.current = false; }, 100);
+
+      if (!isDirtyRef.current) {
+        // Nothing changed during save — safe to sync from server response
+        isLoadingRef.current = true;
+        const rebuilt = stateFromApi(saved);
+        setBoxes(rebuilt.boxes);
+        setBuyoffIcons(rebuilt.buyoffIcons);
+        setConnections(rebuilt.connections);
+        setTextLabels(rebuilt.textLabels || []);
+        setCanvasArrows(rebuilt.canvasArrows || []);
+        setLayoutName(saved.name);
+        setTimeout(() => { isLoadingRef.current = false; }, 100);
+      } else {
+        // A mutation (e.g. delete) happened while saving — schedule a re-save
+        // to persist those changes without overwriting the current state
+        autoSaveTimerRef.current = setTimeout(async () => {
+          if (isSavingRef.current || isLoadingRef.current) return;
+          isSavingRef.current = true;
+          setAutoSaveStatus('saving');
+          const ok2 = await handleSaveRef.current();
+          isSavingRef.current = false;
+          setAutoSaveStatus(ok2 ? 'saved' : 'error');
+          if (ok2) setTimeout(() => setAutoSaveStatus((s) => s === 'saved' ? 'idle' : s), 2000);
+        }, 500);
+      }
       return true;
     } catch (err) {
       console.error('Save failed:', err);
+      isDirtyRef.current = true; // restore dirty so next attempt re-sends
       return false;
     }
-  }, [layoutName, boxes, buyoffIcons, connections, currentLayoutId, userId]);
+  }, [layoutName, boxes, buyoffIcons, connections, textLabels, canvasArrows, currentLayoutId, userId]);
 
   // ── Load layout ─────────────────────────────────────────────────────────────
   const handleLoad = useCallback(async (layoutId) => {
@@ -719,6 +917,8 @@ function LayoutPreparation({
       setBoxes(rebuilt.boxes);
       setBuyoffIcons(rebuilt.buyoffIcons);
       setConnections(rebuilt.connections);
+      setTextLabels(rebuilt.textLabels || []);
+      setCanvasArrows(rebuilt.canvasArrows || []);
       setLayoutName(data.name);
       setCurrentLayoutId(data.id);
       isDirtyRef.current = false;
@@ -739,6 +939,8 @@ function LayoutPreparation({
     const copyName = `Copy of ${layoutName}`;
     const payload = {
       name: copyName,
+      text_labels: JSON.stringify(textLabels.map(({ id, text, x, y, w, h }) => ({ id, text, x, y, w, h }))),
+      canvas_arrows: JSON.stringify(canvasArrows.map(({ id, direction, label, x, y, w, h }) => ({ id, direction, label, x, y, w, h }))),
       boxes: boxes.map((b) => ({
         local_id: b.id,
         name: b.name,
@@ -758,6 +960,7 @@ function LayoutPreparation({
         local_id: ic.id,
         position_x: ic.position.x,
         position_y: ic.position.y,
+        name: ic.name || '',
       })),
       connections: connections.map((c) => ({
         from_local_id: c.fromId,
@@ -774,6 +977,8 @@ function LayoutPreparation({
       setBoxes(rebuilt.boxes);
       setBuyoffIcons(rebuilt.buyoffIcons);
       setConnections(rebuilt.connections);
+      setTextLabels(rebuilt.textLabels || []);
+      setCanvasArrows(rebuilt.canvasArrows || []);
       setLayoutName(saved.name);
       isDirtyRef.current = false;
       nameModalShownRef.current = false;
@@ -787,7 +992,7 @@ function LayoutPreparation({
       setAutoSaveStatus('error');
       return null;
     }
-  }, [layoutName, boxes, buyoffIcons, connections, userId]);
+  }, [layoutName, boxes, buyoffIcons, connections, textLabels, canvasArrows, userId]);
 
   // ── Clear all ───────────────────────────────────────────────────────────────
   const handleClearAll = () => {
@@ -849,10 +1054,10 @@ function LayoutPreparation({
 
   // ── Auto-save: debounce 1.5s after any canvas change ────────────────────────
   useEffect(() => {
-    if (isLoadingRef.current || isSavingRef.current) return;
     if (boxes.length === 0 && buyoffIcons.length === 0 && connections.length === 0) return;
-
+    // Always mark dirty so deletions during a save are not lost
     isDirtyRef.current = true;
+    if (isLoadingRef.current || isSavingRef.current) return;
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
 
     if (currentLayoutId) {
@@ -869,11 +1074,11 @@ function LayoutPreparation({
     } else if (!nameModalShownRef.current) {
       // New layout — prompt for a name before first save
       nameModalShownRef.current = true;
-      setNameDraft('');
+      setNameDraft(uniqueLayoutName('New Layout', savedLayoutsRef.current));
       setShowNameModal(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boxes, buyoffIcons, connections, currentLayoutId]);
+  }, [boxes, buyoffIcons, connections, textLabels, canvasArrows, currentLayoutId]);
 
   // ── Save immediately when user leaves the tab / page ────────────────────────
   useEffect(() => {
@@ -902,6 +1107,8 @@ function LayoutPreparation({
     try {
       const payload = {
         name: trimmed,
+        text_labels: JSON.stringify(textLabels.map(({ id, text, x, y, w, h }) => ({ id, text, x, y, w, h }))),
+      canvas_arrows: JSON.stringify(canvasArrows.map(({ id, direction, label, x, y, w, h }) => ({ id, direction, label, x, y, w, h }))),
         boxes: boxes.map((b) => ({
           local_id: b.id,
           name: b.name,
@@ -921,6 +1128,7 @@ function LayoutPreparation({
           local_id: ic.id,
           position_x: ic.position.x,
           position_y: ic.position.y,
+          name: ic.name || '',
         })),
         connections: connections.map((c) => ({
           from_local_id: c.fromId,
@@ -935,6 +1143,8 @@ function LayoutPreparation({
       setBoxes(rebuilt.boxes);
       setBuyoffIcons(rebuilt.buyoffIcons);
       setConnections(rebuilt.connections);
+      setTextLabels(rebuilt.textLabels || []);
+      setCanvasArrows(rebuilt.canvasArrows || []);
       setLayoutName(saved.name);
       isDirtyRef.current = false;
       setTimeout(() => { isLoadingRef.current = false; }, 100);
@@ -1062,7 +1272,7 @@ function LayoutPreparation({
             minScale={0.15}
             maxScale={3}
             wheel={{ step: 0.08 }}
-            panning={{ excluded: ['station-box-drag-handle--fill', 'buyoff-drag-handle', 'station-port', 'buyoff-port'] }}
+            panning={{ excluded: ['station-box-drag-handle--fill', 'buyoff-drag-handle', 'station-port', 'buyoff-port', 'ctl-wrap', 'ca-wrap'] }}
             onTransformed={(_, state) => {
                 setCanvasScale(state.scale);
                 setTransformState({ scale: state.scale, positionX: state.positionX, positionY: state.positionY });
@@ -1097,6 +1307,38 @@ function LayoutPreparation({
                         onPositionChange={handleBuyoffPositionChange}
                         onDelete={handleDeleteBuyoff}
                         onPortMouseDown={handlePortMouseDown}
+                        canvasScale={canvasScale}
+                      />
+                    ))}
+
+                    {textLabels.map((tl) => (
+                      <CanvasTextLabel
+                        key={tl.id}
+                        id={tl.id}
+                        position={{ x: tl.x, y: tl.y }}
+                        size={{ w: tl.w || 160, h: tl.h || 56 }}
+                        text={tl.text}
+                        onPositionChange={handleTextLabelPositionChange}
+                        onSizeChange={handleTextLabelSizeChange}
+                        onTextChange={handleTextLabelTextChange}
+                        onDelete={handleDeleteTextLabel}
+                        canvasScale={canvasScale}
+                      />
+                    ))}
+
+                    {canvasArrows.map((arrow) => (
+                      <CanvasArrow
+                        key={arrow.id}
+                        id={arrow.id}
+                        position={{ x: arrow.x, y: arrow.y }}
+                        size={{ w: arrow.w || 120, h: arrow.h || 50 }}
+                        direction={arrow.direction}
+                        label={arrow.label}
+                        onPositionChange={handleArrowPositionChange}
+                        onSizeChange={handleArrowSizeChange}
+                        onDirectionChange={handleArrowDirectionChange}
+                        onLabelChange={handleArrowLabelChange}
+                        onDelete={handleDeleteArrow}
                         canvasScale={canvasScale}
                       />
                     ))}

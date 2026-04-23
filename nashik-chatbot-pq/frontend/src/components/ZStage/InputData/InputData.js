@@ -637,8 +637,8 @@ function AddMonthModal({ existingMonths, onAdd, onClose }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="add-month-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="add-month-modal">
         <div className="modal-header">
           <span className="modal-title">Add New Month</span>
           <button className="modal-close" onClick={onClose}><X size={16} /></button>
@@ -796,8 +796,8 @@ function AddRecordModal({ type, onClose, onSaved, userId, layoutId, layoutStageI
   );
 
   return createPortal(
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="add-record-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="add-record-modal">
         <div className="modal-header">
           <span className="modal-title">Add Record — {
             type === 'master' ? 'Master Data' :
@@ -1593,8 +1593,8 @@ export default function InputData({ userId, layouts = [] }) {
 
       {/* ── Template preview modal ─────────────────────────────────────────── */}
       {templatePreviewModal && createPortal(
-        <div className="template-modal-overlay" onClick={() => setTemplatePreviewModal(null)}>
-          <div className="template-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="template-modal-overlay">
+          <div className="template-modal">
             <div className="template-modal-header">
               <span className="template-modal-title">
                 {TEMPLATE_DEFS[templatePreviewModal]?.label} — Column Reference

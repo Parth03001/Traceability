@@ -75,6 +75,8 @@ def update_layout(layout_id: int, payload: schemas.LayoutUpdate, connector: Stat
         "name": payload.name,
         "legend_position_x": payload.legend_position_x,
         "legend_position_y": payload.legend_position_y,
+        "text_labels": payload.text_labels,
+        "canvas_arrows": payload.canvas_arrows,
     })
     if not rows:
         raise HTTPException(status_code=500, detail="Failed to update layout")
@@ -110,7 +112,7 @@ def _execute_snapshot(layout_id: int, payload: schemas.LayoutSnapshotCreate, con
         session.execute(text(SnapshotQueries.DELETE_BUYOFF_ICONS), {"layout_id": layout_id})
         session.execute(text(SnapshotQueries.DELETE_STATION_BOXES), {"layout_id": layout_id})
 
-        # 2. Update layout name + legend position
+        # 2. Update layout name, legend position, text labels and canvas arrows
         session.execute(
             text(LayoutQueries.UPDATE_LAYOUT),
             {
@@ -118,6 +120,8 @@ def _execute_snapshot(layout_id: int, payload: schemas.LayoutSnapshotCreate, con
                 "name": payload.name,
                 "legend_position_x": payload.legend_position_x,
                 "legend_position_y": payload.legend_position_y,
+                "text_labels": payload.text_labels or "[]",
+                "canvas_arrows": payload.canvas_arrows or "[]",
             },
         )
 
@@ -150,6 +154,7 @@ def _execute_snapshot(layout_id: int, payload: schemas.LayoutSnapshotCreate, con
                     "layout_id": layout_id,
                     "position_x": icon.position_x,
                     "position_y": icon.position_y,
+                    "name": icon.name or "",
                 },
             )
             row = result.fetchone()

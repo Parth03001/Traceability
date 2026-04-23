@@ -44,6 +44,7 @@ class StationBoxOut(StationBoxBase):
 class BuyoffIconBase(BaseModel):
     position_x: float = 0.0
     position_y: float = 0.0
+    name: Optional[str] = ""
 
 
 class BuyoffIconCreate(BuyoffIconBase):
@@ -53,6 +54,7 @@ class BuyoffIconCreate(BuyoffIconBase):
 class BuyoffIconUpdate(BaseModel):
     position_x: Optional[float] = None
     position_y: Optional[float] = None
+    name: Optional[str] = None
 
 
 class BuyoffIconOut(BuyoffIconBase):
@@ -100,6 +102,8 @@ class LayoutUpdate(BaseModel):
     name: Optional[str] = None
     legend_position_x: Optional[float] = None
     legend_position_y: Optional[float] = None
+    text_labels: Optional[str] = None
+    canvas_arrows: Optional[str] = None
 
 
 class LayoutOut(LayoutBase):
@@ -107,6 +111,8 @@ class LayoutOut(LayoutBase):
     user_id: Optional[int] = None
     legend_position_x: Optional[float] = None
     legend_position_y: Optional[float] = None
+    text_labels: Optional[str] = "[]"
+    canvas_arrows: Optional[str] = "[]"
     created_at: datetime
     updated_at: datetime
     station_boxes: List[StationBoxOut] = []
@@ -144,6 +150,7 @@ class SnapshotBuyoffIcon(BaseModel):
     local_id: str
     position_x: float = 0.0
     position_y: float = 0.0
+    name: Optional[str] = ""
 
 
 # Backward-compat alias
@@ -161,6 +168,8 @@ class LayoutSnapshotCreate(BaseModel):
     name: str
     legend_position_x: Optional[float] = None
     legend_position_y: Optional[float] = None
+    text_labels: Optional[str] = "[]"
+    canvas_arrows: Optional[str] = "[]"
     boxes: List[SnapshotBox] = []
     buyoff_icons: List[SnapshotBuyoffIcon] = []
     connections: List[SnapshotConnection] = []

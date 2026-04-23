@@ -32,7 +32,7 @@ function BuyoffIcon({ id, position: parentPosition, onPositionChange, onDelete, 
   const handlePortDown = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const portId = e.currentTarget.id;  // e.g. "loc-3__top"
+    const portId = e.currentTarget.id;
     const rect = e.currentTarget.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;

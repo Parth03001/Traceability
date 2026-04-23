@@ -7,6 +7,8 @@ import {
   BarChart2,
   Plus,
   Diamond,
+  Type,
+  MoveRight,
   Save,
   FolderOpen,
   Copy,
@@ -166,6 +168,8 @@ function Sidebar({ activeSection, onSectionChange, layoutActions }) {
   const {
     onAddBox,
     onAddBuyoff,
+    onAddText,
+    onAddArrow,
     onSaveLayout,
     onLoadLayout,
     onDuplicateLayout,
@@ -226,6 +230,14 @@ function Sidebar({ activeSection, onSectionChange, layoutActions }) {
 
                 <button className="sidebar-sub-btn sidebar-sub-btn--buyoff" onClick={onAddBuyoff}>
                   <Diamond size={14} className="sidebar-diamond-icon" /> Add Buyoff
+                </button>
+
+                <button className="sidebar-sub-btn sidebar-sub-btn--text" onClick={onAddText}>
+                  <Type size={14} /> Add Text
+                </button>
+
+                <button className="sidebar-sub-btn sidebar-sub-btn--arrow" onClick={onAddArrow}>
+                  <MoveRight size={14} /> Add Arrow
                 </button>
 
                 <div className="sidebar-sub-divider" />

@@ -148,6 +148,28 @@
   background-color: rgba(246, 201, 14, 0.2);
 }
 
+/* Add Text */
+.sidebar-sub-btn--text {
+  background-color: rgba(99, 179, 237, 0.1);
+  color: #90cdf4;
+  border-color: rgba(99, 179, 237, 0.25);
+}
+
+.sidebar-sub-btn--text:hover {
+  background-color: rgba(99, 179, 237, 0.2);
+}
+
+/* Add Arrow */
+.sidebar-sub-btn--arrow {
+  background-color: rgba(154, 230, 180, 0.1);
+  color: #9ae6b4;
+  border-color: rgba(154, 230, 180, 0.25);
+}
+
+.sidebar-sub-btn--arrow:hover {
+  background-color: rgba(154, 230, 180, 0.2);
+}
+
 /* Save */
 .sidebar-sub-btn--save {
   background-color: rgba(255, 255, 255, 0.15);
