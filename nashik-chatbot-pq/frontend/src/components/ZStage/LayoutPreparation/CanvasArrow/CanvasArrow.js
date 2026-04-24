@@ -3,8 +3,8 @@ import Draggable from 'react-draggable';
 import { Check, X, RotateCw } from 'lucide-react';
 import './CanvasArrow.css';
 
-const MIN_W = 50;
-const MIN_H = 28;
+const MIN_W = 36;
+const MIN_H = 16;
 
 const DIRECTIONS = ['right', 'down', 'left', 'up'];
 const DIR_DEG = { right: 0, down: 90, left: 180, up: 270 };
@@ -108,8 +108,16 @@ export default function CanvasArrow({
   const rotate = (e) => {
     e.stopPropagation();
     const next = DIRECTIONS[(DIRECTIONS.indexOf(direction) + 1) % 4];
+    // Swap w/h when crossing horizontal ↔ vertical so thickness & length stay consistent
+    const wasVertical = direction === 'up' || direction === 'down';
+    const isVertical  = next     === 'up' || next     === 'down';
     setDir(next);
     onDirectionChange?.(id, next);
+    if (wasVertical !== isVertical) {
+      const swapped = { w: size.h, h: size.w };
+      setSize(swapped);
+      onSizeChange?.(id, swapped);
+    }
   };
 
   const handleOk = (e) => {

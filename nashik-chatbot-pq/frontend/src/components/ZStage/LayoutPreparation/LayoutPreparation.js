@@ -773,7 +773,7 @@ function LayoutPreparation({
     const { positionX, positionY, scale } = transformStateRef.current;
     const cw = canvasRef.current?.clientWidth  || 800;
     const ch = canvasRef.current?.clientHeight || 600;
-    const W = 120, H = 50;
+    const W = 36, H = 20;
     // Offset base slightly below centre so text and arrow don't land on the same spot
     const baseCx = Math.max(GRID, Math.round((-positionX + cw / 2) / scale) - W / 2);
     const baseCy = Math.max(GRID, Math.round((-positionY + ch / 2) / scale) + 2 * GRID);
@@ -1052,6 +1052,19 @@ function LayoutPreparation({
   // Keep ref always pointing to latest handleSave (avoids stale closure in timer)
   useEffect(() => { handleSaveRef.current = handleSave; }, [handleSave]);
 
+  // Save immediately when the user finishes editing the layout name
+  const handleNameEditDone = useCallback(async () => {
+    setEditingName(false);
+    if (currentLayoutId && !isSavingRef.current && !isLoadingRef.current) {
+      isSavingRef.current = true;
+      setAutoSaveStatus('saving');
+      const ok = await handleSaveRef.current?.();
+      isSavingRef.current = false;
+      setAutoSaveStatus(ok ? 'saved' : 'error');
+      if (ok) setTimeout(() => setAutoSaveStatus((s) => s === 'saved' ? 'idle' : s), 2000);
+    }
+  }, [currentLayoutId]);
+
   // ── Auto-save: debounce 1.5s after any canvas change ────────────────────────
   useEffect(() => {
     if (boxes.length === 0 && buyoffIcons.length === 0 && connections.length === 0) return;
@@ -1173,8 +1186,8 @@ function LayoutPreparation({
                 className="layout-name-input"
                 value={layoutName}
                 onChange={(e) => setLayoutName(e.target.value)}
-                onBlur={() => setEditingName(false)}
-                onKeyDown={(e) => e.key === 'Enter' && setEditingName(false)}
+                onBlur={handleNameEditDone}
+                onKeyDown={(e) => e.key === 'Enter' && handleNameEditDone()}
                 autoFocus
               />
             ) : (

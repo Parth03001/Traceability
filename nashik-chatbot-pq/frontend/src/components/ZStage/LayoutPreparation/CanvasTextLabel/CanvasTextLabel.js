@@ -1,10 +1,41 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Draggable from 'react-draggable';
-import { Check, X } from 'lucide-react';
+import { Check, X, Trash2 } from 'lucide-react';
 import './CanvasTextLabel.css';
 
-const MIN_W = 80;
-const MIN_H = 32;
+// S / M / L only controls font size — box width auto-fits text
+const PRESETS = {
+  S: { fs: 7  },
+  M: { fs: 12 },
+  L: { fs: 16 },
+};
+
+const MIN_W = 30;
+const MIN_H = 14;
+
+function detectPreset(w) {
+  if (w <= 80)  return 'S';
+  if (w <= 140) return 'M';
+  return 'L';
+}
+
+// Measure the pixel width of the longest line at a given font size
+function measureWidth(text, fontSize) {
+  const ff   = getComputedStyle(document.body).fontFamily || 'Arial,sans-serif';
+  const lines = (text || 'W').split('\n');
+  const longest = lines.reduce((a, b) => (a.length >= b.length ? a : b), 'W');
+  const span = document.createElement('span');
+  span.style.cssText = (
+    `position:fixed;top:-9999px;left:0;visibility:hidden;white-space:pre;` +
+    `font-size:${fontSize}px;font-weight:700;font-family:${ff};`
+  );
+  span.textContent = longest;
+  document.body.appendChild(span);
+  const w = Math.max(MIN_W, Math.ceil(span.offsetWidth) + 4);
+  document.body.removeChild(span);
+  return w;
+}
 
 export default function CanvasTextLabel({
   id,
@@ -17,169 +48,221 @@ export default function CanvasTextLabel({
   onDelete,
   canvasScale,
 }) {
-  const [pos,      setPos     ] = useState(parentPos  || { x: 40, y: 40 });
-  const [size,     setSize    ] = useState(parentSize || { w: 160, h: 56 });
-  const [text,     setText    ] = useState(parentText || '');
-  const [selected, setSelected] = useState(false);
+  const initPreset = detectPreset(parentSize?.w || 80);
+  const initFS     = PRESETS[initPreset].fs;
+  const initW      = parentSize?.w || measureWidth(parentText || '', initFS);
+  const initH      = parentSize?.h || MIN_H;
 
-  const wrapRef    = useRef(null);
-  const iRef       = useRef(null);   // active resize interaction
-  const didDragRef = useRef(false);  // distinguish drag from click
+  const [pos,     setPos    ] = useState(parentPos || { x: 40, y: 40 });
+  const [size,    setSize   ] = useState({ w: initW, h: initH });
+  const [text,    setText   ] = useState(parentText || '');
+  const [editing, setEditing] = useState(false);
+  const [preset,  setPreset ] = useState(initPreset);
+  const [liveH,   setLiveH  ] = useState(null);
+  const [liveW,   setLiveW  ] = useState(null);
+  const [tbPos,   setTbPos  ] = useState(null);
 
-  /* ── Sync from parent ─────────────────────────────────────────────────── */
+  const wrapRef = useRef(null);
+  const taRef   = useRef(null);
+  const tbRef   = useRef(null);
+  const dragRef = useRef(false);
+  const origRef = useRef('');
+
+  const fontSize = PRESETS[preset].fs;
+
+  // Auto-size while editing: height from scrollHeight, width from longest-line measurement
   useEffect(() => {
-    if (parentPos && (parentPos.x !== pos.x || parentPos.y !== pos.y)) setPos(parentPos);
+    if (!editing || !taRef.current) return;
+    // Height
+    taRef.current.style.height = '1px';
+    const sh = taRef.current.scrollHeight;
+    taRef.current.style.height = '';
+    setLiveH(Math.max(MIN_H, sh + 2));
+    // Width
+    setLiveW(measureWidth(text, fontSize));
+  }, [text, editing, fontSize]);
+
+  // Display size: live while editing, saved size otherwise
+  const dispW = editing ? (liveW ?? size.w) : size.w;
+  const dispH = editing ? (liveH ?? Math.max(size.h, MIN_H)) : size.h;
+
+  // Focus on edit start
+  useEffect(() => {
+    if (!editing) return;
+    origRef.current = text;
+    setTimeout(() => {
+      if (!taRef.current) return;
+      taRef.current.focus();
+      taRef.current.setSelectionRange(taRef.current.value.length, taRef.current.value.length);
+    }, 0);
+  }, [editing]); // eslint-disable-line
+
+  // Sync from parent
+  useEffect(() => { setText(parentText || ''); }, [parentText]);
+  useEffect(() => {
+    if (parentPos) setPos(parentPos);
   }, [parentPos?.x, parentPos?.y]); // eslint-disable-line
 
+  // Toolbar position
   useEffect(() => {
-    if (parentSize && (parentSize.w !== size.w || parentSize.h !== size.h)) setSize(parentSize);
-  }, [parentSize?.w, parentSize?.h]); // eslint-disable-line
-
-  useEffect(() => { setText(parentText || ''); }, [parentText]);
-
-  /* ── Auto-focus textarea on select ──────────────────────────────────── */
-  useEffect(() => {
-    if (selected) setTimeout(() => wrapRef.current?.querySelector('textarea')?.focus(), 0);
-  }, [selected]);
-
-  /* ── Click-outside → deselect; auto-delete if still empty ───────────── */
-  useEffect(() => {
-    if (!selected) return;
-    const h = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
-        setSelected(false);
-        const trimmed = text.trim();
-        if (!trimmed) onDelete?.(id);
-        else onTextChange?.(id, trimmed);
-      }
+    if (!editing) { setTbPos(null); return; }
+    const update = () => {
+      if (!wrapRef.current) return;
+      const r = wrapRef.current.getBoundingClientRect();
+      setTbPos({ top: r.top, left: r.left });
     };
-    document.addEventListener('mousedown', h, true);
-    return () => document.removeEventListener('mousedown', h, true);
-  }, [selected, id, text, onTextChange, onDelete]);
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [editing, pos.x, pos.y, dispW, dispH]);
 
-  /* ── Resize (custom; Draggable cancel prevents its own drag on handles) ─ */
-  const onResizeMove = useCallback((e) => {
-    const d = iRef.current;
-    if (!d) return;
-    const sc = canvasScale || 1;
-    const dx = (e.clientX - d.cx0) / sc;
-    const dy = (e.clientY - d.cy0) / sc;
-    let x = d.px0, y = d.py0, w = d.w0, h = d.h0;
-    if (d.c.includes('e')) w = Math.max(MIN_W, d.w0 + dx);
-    if (d.c.includes('w')) { w = Math.max(MIN_W, d.w0 - dx); x = d.px0 + d.w0 - w; }
-    if (d.c.includes('s')) h = Math.max(MIN_H, d.h0 + dy);
-    if (d.c.includes('n')) { h = Math.max(MIN_H, d.h0 - dy); y = d.py0 + d.h0 - h; }
-    setPos({ x, y });
-    setSize({ w, h });
-  }, [canvasScale]);
+  // Save: commit live size (width fits text, height fits lines)
+  const handleSave = useCallback(() => {
+    const trimmed = text.trim();
+    if (!trimmed) { onDelete?.(id); return; }
+    const finalW = measureWidth(trimmed, fontSize);
+    const lines  = trimmed.split('\n').length;
+    const finalH = Math.max(MIN_H, Math.ceil(lines * fontSize * 1.4) + 2);
+    const final  = { w: finalW, h: finalH };
+    setSize(final);
+    setLiveW(null);
+    setLiveH(null);
+    setEditing(false);
+    onTextChange?.(id, trimmed);
+    onSizeChange?.(id, final);
+  }, [id, text, fontSize, onDelete, onTextChange, onSizeChange]);
 
-  const onResizeUp = useCallback((e) => {
-    const d = iRef.current;
-    if (!d) return;
-    iRef.current = null;
-    window.removeEventListener('mousemove', onResizeMove);
-    window.removeEventListener('mouseup', onResizeUp);
-    const sc = canvasScale || 1;
-    const dx = (e.clientX - d.cx0) / sc;
-    const dy = (e.clientY - d.cy0) / sc;
-    let x = d.px0, y = d.py0, w = d.w0, h = d.h0;
-    if (d.c.includes('e')) w = Math.max(MIN_W, d.w0 + dx);
-    if (d.c.includes('w')) { w = Math.max(MIN_W, d.w0 - dx); x = d.px0 + d.w0 - w; }
-    if (d.c.includes('s')) h = Math.max(MIN_H, d.h0 + dy);
-    if (d.c.includes('n')) { h = Math.max(MIN_H, d.h0 - dy); y = d.py0 + d.h0 - h; }
-    onPositionChange?.(id, { x, y });
-    onSizeChange?.(id, { w, h });
-  }, [id, canvasScale, onPositionChange, onSizeChange, onResizeMove]);
+  const handleCancel = useCallback(() => {
+    setEditing(false);
+    setLiveW(null);
+    setLiveH(null);
+    const orig = origRef.current;
+    if (!orig.trim()) { onDelete?.(id); return; }
+    setText(orig);
+    onTextChange?.(id, orig);
+  }, [id, onDelete, onTextChange]);
 
-  const beginResize = (c, e) => {
+  const handleDelete = useCallback(() => {
+    setEditing(false);
+    onDelete?.(id);
+  }, [id, onDelete]);
+
+  // S / M / L only changes font size — width/height recalculate automatically
+  const applyPreset = (key) => setPreset(key);
+
+  // Resize handles (manual override)
+  const beginResize = (corner, e) => {
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
-    iRef.current = {
-      c,
-      cx0: e.clientX, cy0: e.clientY,
-      px0: pos.x,     py0: pos.y,
-      w0:  size.w,    h0:  size.h,
+    const sc = canvasScale || 1;
+    const s0 = { cx0: e.clientX, cy0: e.clientY, px0: pos.x, py0: pos.y, w0: size.w, h0: size.h };
+
+    const calc = (ev) => {
+      const dx = (ev.clientX - s0.cx0) / sc;
+      const dy = (ev.clientY - s0.cy0) / sc;
+      let x = s0.px0, y = s0.py0, w = s0.w0, h = s0.h0;
+      if (corner.includes('e'))  w = Math.max(MIN_W, s0.w0 + dx);
+      if (corner.includes('w')) { w = Math.max(MIN_W, s0.w0 - dx); x = s0.px0 + s0.w0 - w; }
+      if (corner.includes('s'))  h = Math.max(MIN_H, s0.h0 + dy);
+      if (corner.includes('n')) { h = Math.max(MIN_H, s0.h0 - dy); y = s0.py0 + s0.h0 - h; }
+      return { x, y, w, h };
     };
-    window.addEventListener('mousemove', onResizeMove);
-    window.addEventListener('mouseup', onResizeUp);
+
+    const onMove = (ev) => { const r = calc(ev); setPos({ x: r.x, y: r.y }); setSize({ w: r.w, h: r.h }); };
+    const onUp   = (ev) => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      const r = calc(ev);
+      setPos({ x: r.x, y: r.y });
+      setSize({ w: r.w, h: r.h });
+      onPositionChange?.(id, { x: r.x, y: r.y });
+      onSizeChange?.(id, { w: r.w, h: r.h });
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
   };
-
-  const handleOk = (e) => {
-    e.stopPropagation();
-    setSelected(false);
-    const trimmed = text.trim();
-    if (!trimmed) onDelete?.(id);
-    else onTextChange?.(id, trimmed);
-  };
-
-  const isEmpty = !text.trim();
-
-  /* Font size scales proportionally with box height so resize = resize text */
-  const fontSize = Math.max(7, Math.round(size.h * 0.22));
 
   const CURSORS = {
-    nw: 'nwse-resize', n: 'ns-resize',  ne: 'nesw-resize',
-    e:  'ew-resize',   se:'nwse-resize', s:  'ns-resize',
-    sw: 'nesw-resize', w: 'ew-resize',
+    nw: 'nwse-resize', n: 'ns-resize',  ne: 'nesw-resize', e: 'ew-resize',
+    se: 'nwse-resize', s: 'ns-resize',  sw: 'nesw-resize', w: 'ew-resize',
   };
 
-  return (
-    <Draggable
-      nodeRef={wrapRef}
-      position={pos}
-      onStart={() => { didDragRef.current = false; }}
-      onDrag={(e, data) => { didDragRef.current = true; setPos({ x: data.x, y: data.y }); }}
-      onStop={(e, data) => {
-        if (didDragRef.current) onPositionChange?.(id, { x: data.x, y: data.y });
-      }}
-      scale={canvasScale || 1}
-      cancel=".ctl-rz,.ctl-toolbar"
+  const toolbar = editing && tbPos && createPortal(
+    <div
+      ref={tbRef}
+      className="ctl-toolbar"
+      style={{ position: 'fixed', top: Math.max(4, tbPos.top - 40), left: tbPos.left, zIndex: 9999 }}
+      onMouseDown={(e) => e.stopPropagation()}
     >
-      <div
-        ref={wrapRef}
-        className={`ctl-wrap${selected ? ' ctl-wrap--sel' : ''}${isEmpty ? ' ctl-wrap--empty' : ''}`}
-        style={{ width: size.w, height: size.h }}
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => { e.stopPropagation(); if (!didDragRef.current) setSelected(true); }}
+      {['S', 'M', 'L'].map((k) => (
+        <button
+          key={k}
+          className={`ctl-preset${preset === k ? ' ctl-preset--active' : ''}`}
+          onClick={() => applyPreset(k)}
+        >
+          {k}
+        </button>
+      ))}
+      <div className="ctl-sep" />
+      <button className="ctl-ok"     onClick={(e) => { e.stopPropagation(); handleSave();   }}><Check size={9} /> Save</button>
+      <button className="ctl-cancel" onClick={(e) => { e.stopPropagation(); handleCancel(); }}><X size={9} /> Cancel</button>
+      <div className="ctl-sep" />
+      <button className="ctl-delete" onClick={(e) => { e.stopPropagation(); handleDelete(); }}><Trash2 size={9} /></button>
+    </div>,
+    document.body
+  );
+
+  return (
+    <>
+      <Draggable
+        nodeRef={wrapRef}
+        position={pos}
+        onStart={() => { dragRef.current = false; }}
+        onDrag={(_, d) => { dragRef.current = true; setPos({ x: d.x, y: d.y }); }}
+        onStop={(_, d) => { if (dragRef.current) onPositionChange?.(id, { x: d.x, y: d.y }); }}
+        scale={canvasScale || 1}
+        cancel=".ctl-rz"
       >
-        {/* ── Textarea — always full height, font scales with box ─────────── */}
-        <textarea
-          className="ctl-ta"
-          style={{ fontSize }}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onMouseDown={(e) => { if (selected) e.stopPropagation(); }}
-          onClick={(e) => { if (selected) e.stopPropagation(); }}
-          placeholder="Type here…"
-          readOnly={!selected}
-          spellCheck={false}
-        />
+        <div
+          ref={wrapRef}
+          className={`ctl-wrap${editing ? ' ctl-editing' : ''}`}
+          style={{ width: dispW, height: dispH }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); if (!dragRef.current) setEditing(true); }}
+        >
+          {editing ? (
+            <textarea
+              ref={taRef}
+              className="ctl-ta"
+              style={{ fontSize }}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              spellCheck={false}
+            />
+          ) : (
+            <div className="ctl-disp" style={{ fontSize }}>
+              {text || <span className="ctl-ph">Type here…</span>}
+            </div>
+          )}
 
-        {/* ── Floating toolbar (OK + Delete) ───────────────────────────────── */}
-        {selected && (
-          <div className="ctl-toolbar" onMouseDown={(e) => e.stopPropagation()}>
-            <button className="ctl-ok" onClick={handleOk} title="Save & close">
-              <Check size={9} /> OK
-            </button>
-            {onDelete && (
-              <button className="ctl-del" onClick={(e) => { e.stopPropagation(); onDelete(id); }} title="Delete">
-                <X size={9} />
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* ── Resize handles (8 dots) — shown on hover & selected via CSS ─── */}
-        {['nw','n','ne','e','se','s','sw','w'].map((c) => (
-          <div
-            key={c}
-            className={`ctl-rz ctl-rz--${c}`}
-            style={{ cursor: CURSORS[c] }}
-            onMouseDown={(e) => beginResize(c, e)}
-          />
-        ))}
-      </div>
-    </Draggable>
+          {['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map((c) => (
+            <div
+              key={c}
+              className={`ctl-rz ctl-rz-${c}`}
+              style={{ cursor: CURSORS[c] }}
+              onMouseDown={(e) => beginResize(c, e)}
+            />
+          ))}
+        </div>
+      </Draggable>
+      {toolbar}
+    </>
   );
 }

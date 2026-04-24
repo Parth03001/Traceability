@@ -67,10 +67,13 @@
   transform: scale(1.4) !important;
 }
 
-.buyoff-port--right  { right: -5px;  top: 50%;    transform: translateY(-50%); }
-.buyoff-port--left   { left: -5px;   top: 50%;    transform: translateY(-50%); }
-.buyoff-port--top    { top: -5px;    left: 50%;   transform: translateX(-50%); }
-.buyoff-port--bottom { bottom: -5px; left: 50%;   transform: translateX(-50%); }
+/* Diamond center in wrapper: x=40, y=28. Half-diagonal≈31px.
+   Tip offsets from wrapper top-left:  top(40,-3) bot(40,59) left(9,28) right(71,28).
+   Port is 10×10 px, so subtract 5 from each axis for top-left anchor. */
+.buyoff-port--top    { top: -8px;  left: 35px; }
+.buyoff-port--bottom { top: 54px;  left: 35px; }
+.buyoff-port--left   { left:  4px; top:  23px; }
+.buyoff-port--right  { left: 66px; top:  23px; }
 
 /* Accordion panel */
 .buyoff-accordion {

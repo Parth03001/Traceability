@@ -1522,11 +1522,13 @@ function ZStageDashboard({ userId, activeLayoutId = null, refreshSignal = 0 }) {
                           className="dash-buyoff"
                           style={{ position: 'absolute', left: icon.position.x, top: icon.position.y }}
                         >
-                          {/* Invisible Xarrow anchor points for each direction */}
-                          <div id={`${icon.id}__top`}    style={{ position:'absolute', top:0,    left:'50%', width:1, height:1, pointerEvents:'none' }} />
-                          <div id={`${icon.id}__bottom`} style={{ position:'absolute', bottom:0, left:'50%', width:1, height:1, pointerEvents:'none' }} />
-                          <div id={`${icon.id}__left`}   style={{ position:'absolute', top:'50%', left:0,   width:1, height:1, pointerEvents:'none' }} />
-                          <div id={`${icon.id}__right`}  style={{ position:'absolute', top:'50%', right:0,  width:1, height:1, pointerEvents:'none' }} />
+                          {/* Invisible anchor points — coords match routeArrow.js tip offsets:
+                              diamond centre at (40,28) in 80×92 wrapper; half-diagonal≈31px.
+                              top(40,-3)  bottom(40,59)  left(9,28)  right(71,28) */}
+                          <div id={`${icon.id}__top`}    style={{ position:'absolute', top:-3,  left:40, width:1, height:1, pointerEvents:'none' }} />
+                          <div id={`${icon.id}__bottom`} style={{ position:'absolute', top:59,  left:40, width:1, height:1, pointerEvents:'none' }} />
+                          <div id={`${icon.id}__left`}   style={{ position:'absolute', top:28,  left:9,  width:1, height:1, pointerEvents:'none' }} />
+                          <div id={`${icon.id}__right`}  style={{ position:'absolute', top:28,  left:71, width:1, height:1, pointerEvents:'none' }} />
                           <div className="dash-buyoff-diamond">
                             <GitBranch size={14} />
                           </div>
@@ -1534,33 +1536,43 @@ function ZStageDashboard({ userId, activeLayoutId = null, refreshSignal = 0 }) {
                       ))}
 
                       {/* Text labels — read-only mirror of layout editor */}
-                      {textLabels.map((tl) => (
-                        tl.text ? (
+                      {textLabels.map((tl) => {
+                        const w  = tl.w || 60;
+                        const h  = tl.h || 14;
+                        const fs = w <= 80 ? 7 : w <= 140 ? 12 : 16;
+                        return (
                           <div
                             key={tl.id}
                             style={{
                               position: 'absolute',
                               left: tl.x,
                               top: tl.y,
-                              width: tl.w || 160,
-                              height: tl.h || 56,
-                              fontSize: Math.max(7, Math.round((tl.h || 56) * 0.22)),
-                              padding: '4px 6px',
+                              width: w,
+                              height: h,
+                              fontSize: fs,
+                              padding: '1px 0',
                               boxSizing: 'border-box',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
                               whiteSpace: 'pre-wrap',
                               wordBreak: 'break-word',
+                              overflow: 'hidden',
                               pointerEvents: 'none',
-                              background: 'transparent',
+                              background: 'rgba(255,255,255,0.85)',
+                              border: '1.5px dashed #9ca3af',
                               borderRadius: 4,
-                              color: '#2c3e50',
-                              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                              color: '#1a202c',
+                              fontFamily: 'inherit',
+                              fontWeight: 700,
                               lineHeight: 1.4,
+                              textAlign: 'center',
                             }}
                           >
                             {tl.text}
                           </div>
-                        ) : null
-                      ))}
+                        );
+                      })}
 
                       {/* Canvas arrows — read-only mirror of layout editor */}
                       {canvasArrows.map((arrow) => {

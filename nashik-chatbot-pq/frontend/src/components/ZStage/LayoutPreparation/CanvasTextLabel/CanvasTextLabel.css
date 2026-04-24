@@ -1,107 +1,138 @@
-/* ── Wrapper ──────────────────────────────────────────────────────────────────
-   Invisible by default when it has content — only shows on hover/select.
-   Dashed border shown when the box is empty (newly placed, not yet typed).    */
-
+/* ── Wrapper ── */
 .ctl-wrap {
   position: absolute;
   top: 0;
   left: 0;
   z-index: 10;
   box-sizing: border-box;
-  border: 1.5px solid transparent;
+  border: 1.5px dashed #9ca3af;
   border-radius: 4px;
+  overflow: hidden;
   user-select: none;
   cursor: grab;
+  background: rgba(255, 255, 255, 0.85);
 }
 
-.ctl-wrap:active {
-  cursor: grabbing;
-}
+.ctl-wrap:active { cursor: grabbing; }
 
-/* Subtle hint on hover (content present) */
 .ctl-wrap:hover {
-  border-color: rgba(49, 130, 206, 0.35);
-  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(49, 130, 206, 0.5);
+  background: rgba(255, 255, 255, 0.95);
 }
 
-/* Empty box (no text yet): clearly visible dashed blue border */
-.ctl-wrap--empty {
-  border: 2px dashed #3182ce;
-  background: rgba(235, 248, 255, 0.85);
-  box-shadow: 0 0 0 1px rgba(49, 130, 206, 0.15);
-}
-
-.ctl-wrap--empty:hover {
-  border-color: #2b6cb0;
-  background: rgba(235, 248, 255, 0.95);
-}
-
-/* ── Selected state ─────────────────────────────────────────────────────── */
-.ctl-wrap--sel {
-  border: 1.5px solid #3182ce !important;
+.ctl-editing {
+  border: 2px solid #3182ce !important;
   background: #fff !important;
-  box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.2);
   cursor: default;
+  box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.2);
 }
 
-/* ── Textarea — fills full box ────────────────────────────────────────────── */
-.ctl-ta {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+/* ── Display (not editing) ── */
+.ctl-disp {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
-  border: none;
-  outline: none;
-  resize: none;
-  background: transparent;
-  /* font-size is set inline and scales with box height */
+  padding: 1px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 700;
   font-family: inherit;
   color: #1a202c;
   line-height: 1.4;
-  padding: 6px 8px;
+  text-align: center;
+  white-space: pre-wrap;
+  word-break: break-word;
   overflow: hidden;
-  z-index: 1;
+  pointer-events: none;
 }
 
-.ctl-ta::placeholder {
+.ctl-ph {
   color: #a0aec0;
   font-weight: 400;
   font-style: italic;
   font-size: 10px;
 }
 
-.ctl-ta:read-only {
-  cursor: grab;
+/* ── Textarea (editing) ── */
+.ctl-ta {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 1px 0;
+  border: none;
+  outline: none;
+  resize: none;
+  background: #fff;
+  font-weight: 700;
+  font-family: inherit;
+  color: #1a202c;
+  line-height: 1.4;
+  text-align: center;
+  overflow: auto;
 }
 
-/* ── Floating toolbar (OK + Delete, floats above the box) ────────────────── */
+/* ── Toolbar ── */
 .ctl-toolbar {
-  position: absolute;
-  bottom: calc(100% + 5px);
-  left: 0;
   display: flex;
   align-items: center;
   gap: 4px;
   background: #fff;
   border: 1px solid #d0d0d0;
-  border-radius: 5px;
-  padding: 3px 5px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 20;
+  border-radius: 6px;
+  padding: 4px 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
   white-space: nowrap;
   pointer-events: all;
 }
 
+/* ── S / M / L preset buttons ── */
+.ctl-preset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: #f0f4f8;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #4a5568;
+  flex-shrink: 0;
+}
+
+.ctl-preset:hover { background: #e2e8f0; border-color: #a0aec0; }
+
+.ctl-preset--active {
+  background: #3182ce;
+  border-color: #3182ce;
+  color: #fff;
+}
+
+.ctl-preset--active:hover { background: #2b6cb0; }
+
+/* ── Separator ── */
+.ctl-sep {
+  width: 1px;
+  height: 18px;
+  background: #e2e8f0;
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* ── Save ── */
 .ctl-ok {
   display: flex;
   align-items: center;
   gap: 3px;
   padding: 3px 9px;
+  height: 22px;
   font-size: 10px;
   font-weight: 600;
   color: #fff;
@@ -115,21 +146,45 @@
 
 .ctl-ok:hover { background: #2b6cb0; }
 
-.ctl-del {
+/* ── Cancel ── */
+.ctl-cancel {
   display: flex;
   align-items: center;
-  padding: 3px 6px;
+  gap: 3px;
+  padding: 3px 7px;
+  height: 22px;
+  font-size: 10px;
+  font-weight: 600;
   color: #e53e3e;
   background: #fff5f5;
   border: 1px solid #fed7d7;
   border-radius: 3px;
   cursor: pointer;
   line-height: 1;
+  font-family: inherit;
 }
 
-.ctl-del:hover { background: #fed7d7; }
+.ctl-cancel:hover { background: #fed7d7; }
 
-/* ── Resize handles (8 dots) ──────────────────────────────────────────────── */
+/* ── Delete ── */
+.ctl-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #e53e3e;
+  flex-shrink: 0;
+}
+
+.ctl-delete:hover { background: #fed7d7; }
+
+/* ── Resize handles ── */
 .ctl-rz {
   position: absolute;
   width: 8px;
@@ -142,20 +197,14 @@
   transition: opacity 0.1s;
 }
 
-/* Visible on hover and when selected */
 .ctl-wrap:hover .ctl-rz,
-.ctl-wrap--sel .ctl-rz {
-  opacity: 1;
-}
+.ctl-editing .ctl-rz { opacity: 1; }
 
-/* Corners */
-.ctl-rz--nw { top: -4px;    left: -4px;                              }
-.ctl-rz--ne { top: -4px;    right: -4px;                             }
-.ctl-rz--se { bottom: -4px; right: -4px;                             }
-.ctl-rz--sw { bottom: -4px; left: -4px;                              }
-
-/* Edges */
-.ctl-rz--n  { top: -4px;    left: 50%; transform: translateX(-50%); }
-.ctl-rz--s  { bottom: -4px; left: 50%; transform: translateX(-50%); }
-.ctl-rz--e  { right: -4px;  top: 50%;  transform: translateY(-50%); }
-.ctl-rz--w  { left: -4px;   top: 50%;  transform: translateY(-50%); }
+.ctl-rz-nw { top: -4px;    left: -4px;                             }
+.ctl-rz-ne { top: -4px;    right: -4px;                            }
+.ctl-rz-se { bottom: -4px; right: -4px;                            }
+.ctl-rz-sw { bottom: -4px; left: -4px;                             }
+.ctl-rz-n  { top: -4px;    left: 50%; transform: translateX(-50%); }
+.ctl-rz-s  { bottom: -4px; left: 50%; transform: translateX(-50%); }
+.ctl-rz-e  { right: -4px;  top: 50%;  transform: translateY(-50%); }
+.ctl-rz-w  { left: -4px;   top: 50%;  transform: translateY(-50%); }

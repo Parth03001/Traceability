@@ -12,15 +12,19 @@ function ZStage() {
   const [activeSection, setActiveSection] = useState('layout');
   const userId = authService.getUserId();
 
-  // ── Layout Preparation state lifted to App so Sidebar can trigger it ────────
+  // 'landing' → show Create New / Open screen; 'canvas' → show the editor
+  const [layoutMode, setLayoutMode] = useState('landing');
+  const [showOpenList, setShowOpenList] = useState(false);
+
+  // ── Layout Preparation state lifted to App so Sidebar can trigger it ──
   const [showAddBoxModal, setShowAddBoxModal] = useState(false);
   const [addBuyoffSignal, setAddBuyoffSignal] = useState(0);
-  const [addTextSignal, setAddTextSignal] = useState(0);
-  const [addArrowSignal, setAddArrowSignal] = useState(0);
-  const [isSaving, setIsSaving] = useState(false);
-  const [savedLayouts, setSavedLayouts] = useState([]);
-  const [activeLayoutId, setActiveLayoutId] = useState(null); // currently loaded layout
-  const [layoutSaveSignal, setLayoutSaveSignal] = useState(0);
+  const [addTextSignal,   setAddTextSignal  ] = useState(0);
+  const [addArrowSignal,  setAddArrowSignal ] = useState(0);
+  const [isSaving,        setIsSaving       ] = useState(false);
+  const [savedLayouts,    setSavedLayouts   ] = useState([]);
+  const [activeLayoutId,  setActiveLayoutId ] = useState(null);
+  const [layoutSaveSignal,setLayoutSaveSignal] = useState(0);
 
   const saveHandlerRef = useRef(null);
   const loadHandlerRef = useRef(null);
@@ -45,20 +49,16 @@ function ZStage() {
     if (loadHandlerRef.current) {
       await loadHandlerRef.current(id);
       setActiveLayoutId(id);
+      setLayoutMode('canvas'); // open canvas once a layout is loaded
     }
   };
 
-  // Copy current canvas as new layout
   const handleCopyLayout = async () => {
     if (!copyHandlerRef.current) return;
     const newId = await copyHandlerRef.current();
-    if (newId) {
-      setActiveLayoutId(newId);
-      refreshLayouts();
-    }
+    if (newId) { setActiveLayoutId(newId); refreshLayouts(); }
   };
 
-  // Duplicate any saved layout by ID (from sidebar menu)
   const handleDuplicateLayout = async (id) => {
     try {
       const res = await layoutApi.getLayout(id);
@@ -82,8 +82,8 @@ function ZStage() {
           position_y: ic.position_y,
           name: ic.name || '',
         })),
-        text_labels: src.text_labels || '[]',
-        canvas_arrows: src.canvas_arrows || '[]',
+        text_labels:    src.text_labels    || '[]',
+        canvas_arrows:  src.canvas_arrows  || '[]',
         connections: (src.connections || []).map((c) => {
           const fromBase = c.from_box_id != null ? `dup-${c.from_box_id}` : `dup-buyoff-${c.from_buyoff_id}`;
           const toBase   = c.to_box_id   != null ? `dup-${c.to_box_id}`   : `dup-buyoff-${c.to_buyoff_id}`;
@@ -94,43 +94,35 @@ function ZStage() {
       };
       await layoutApi.createSnapshot(payload, userId);
       refreshLayouts();
-    } catch (err) {
-      console.error('Duplicate failed:', err);
-    }
+    } catch (err) { console.error('Duplicate failed:', err); }
   };
 
-  // Rename a saved layout
   const handleRenameLayout = async (id, newName) => {
     try {
       await layoutApi.updateLayout(id, { name: newName });
       setSavedLayouts((prev) => prev.map((l) => l.id === id ? { ...l, name: newName } : l));
-    } catch (err) {
-      console.error('Rename failed:', err);
-    }
+    } catch (err) { console.error('Rename failed:', err); }
   };
 
-  // Delete a saved layout
   const handleDeleteLayout = async (id) => {
     try {
       await layoutApi.deleteLayout(id);
       setSavedLayouts((prev) => prev.filter((l) => l.id !== id));
       if (activeLayoutId === id) setActiveLayoutId(null);
-    } catch (err) {
-      console.error('Delete failed:', err);
-    }
+    } catch (err) { console.error('Delete failed:', err); }
   };
 
   const layoutActions = {
-    onAddBox: () => setShowAddBoxModal(true),
-    onAddBuyoff: () => setAddBuyoffSignal((s) => s + 1),
-    onAddText: () => setAddTextSignal((s) => s + 1),
-    onAddArrow: () => setAddArrowSignal((s) => s + 1),
-    onSaveLayout: handleSaveLayout,
-    onLoadLayout: handleLoadLayout,
-    onCopyLayout: handleCopyLayout,
+    onAddBox:         () => setShowAddBoxModal(true),
+    onAddBuyoff:      () => setAddBuyoffSignal((s) => s + 1),
+    onAddText:        () => setAddTextSignal((s) => s + 1),
+    onAddArrow:       () => setAddArrowSignal((s) => s + 1),
+    onSaveLayout:     handleSaveLayout,
+    onLoadLayout:     handleLoadLayout,
+    onCopyLayout:     handleCopyLayout,
     onDuplicateLayout: handleDuplicateLayout,
-    onRenameLayout: handleRenameLayout,
-    onDeleteLayout: handleDeleteLayout,
+    onRenameLayout:   handleRenameLayout,
+    onDeleteLayout:   handleDeleteLayout,
     savedLayouts,
     activeLayoutId,
     isSaving,
@@ -147,7 +139,57 @@ function ZStage() {
         <div className="zstage-header">
           <img src={utilityLogo} alt="Mahindra Utility Logo" className="zstage-header-logo-right" />
         </div>
-        {activeSection === 'layout' && (
+
+        {/* ── Layout section ─────────────────────────────────────────────── */}
+        {/* Always mounted — state survives switching to other tabs          */}
+
+        {/* Landing screen — shown only when no layout has been started yet  */}
+        {activeSection === 'layout' && layoutMode === 'landing' && (
+          <div className="zs-landing">
+            <div className="zs-landing-card">
+              <h2 className="zs-landing-title">Layout Preparation</h2>
+              <p  className="zs-landing-sub">Start fresh or continue with a saved layout</p>
+              <div className="zs-landing-btns">
+                <button
+                  className="zs-landing-btn zs-landing-btn--primary"
+                  onClick={() => { setLayoutMode('canvas'); setActiveLayoutId(null); }}
+                >
+                  + Create New
+                </button>
+                <button
+                  className="zs-landing-btn zs-landing-btn--secondary"
+                  onClick={() => setShowOpenList((v) => !v)}
+                >
+                  📂 Open Existing
+                </button>
+              </div>
+
+              {showOpenList && (
+                <div className="zs-open-list">
+                  {savedLayouts.length === 0 ? (
+                    <p className="zs-open-empty">No saved layouts yet</p>
+                  ) : (
+                    savedLayouts.map((l) => (
+                      <div
+                        key={l.id}
+                        className="zs-open-item"
+                        onClick={() => { handleLoadLayout(l.id); setShowOpenList(false); }}
+                      >
+                        {l.name || `Layout ${l.id}`}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* LayoutPreparation — always mounted so loadHandlerRef is always registered */}
+        <div style={{
+          display: activeSection === 'layout' && layoutMode === 'canvas' ? 'flex' : 'none',
+          flex: 1, flexDirection: 'column', overflow: 'hidden', minHeight: 0,
+        }}>
           <LayoutPreparation
             showAddBoxModal={showAddBoxModal}
             onCloseAddBoxModal={() => setShowAddBoxModal(false)}
@@ -161,17 +203,28 @@ function ZStage() {
             savedLayouts={savedLayouts}
             userId={userId}
           />
-        )}
-        {activeSection === 'input' && (
+        </div>
+
+        {/* InputData — always mounted so state survives tab switches        */}
+        <div style={{
+          display: activeSection === 'input' ? 'flex' : 'none',
+          flex: 1, flexDirection: 'column', overflow: 'hidden', minHeight: 0,
+        }}>
           <InputData userId={userId} layouts={savedLayouts} />
-        )}
-        {activeSection === 'dashboard' && (
+        </div>
+
+        {/* ZStageDashboard — always mounted so state survives tab switches  */}
+        <div style={{
+          display: activeSection === 'dashboard' ? 'flex' : 'none',
+          flex: 1, flexDirection: 'column', overflow: 'hidden', minHeight: 0,
+        }}>
           <ZStageDashboard
             userId={userId}
             activeLayoutId={activeLayoutId}
             refreshSignal={layoutSaveSignal}
           />
-        )}
+        </div>
+
       </main>
     </div>
   );
