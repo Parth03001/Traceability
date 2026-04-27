@@ -223,6 +223,7 @@ function ZStage() {
             userId={userId}
             activeLayoutId={activeLayoutId}
             refreshSignal={layoutSaveSignal}
+            savedLayouts={savedLayouts}
             isActive={activeSection === 'dashboard'}
           />
         </div>

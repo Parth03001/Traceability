@@ -61,6 +61,9 @@
   color: var(--text-dark);
   cursor: pointer;
   min-width: 160px;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dash-layout-select:focus {

@@ -1514,11 +1514,10 @@ function LayoutPreparation({
 
         {/* ── Layout Name Modal (first-time save) ─────────────────────────── */}
         {showNameModal && (
-          <div className="lnm-overlay" onClick={() => setShowNameModal(false)}>
-            <div className="lnm-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="lnm-overlay">
+            <div className="lnm-modal">
               <div className="lnm-header">
                 <span className="lnm-title">Name your layout</span>
-                <button className="lnm-close" onClick={() => setShowNameModal(false)}><X size={14} /></button>
               </div>
               <div className="lnm-body">
                 <label className="lnm-label">Layout name</label>
@@ -1529,7 +1528,6 @@ function LayoutPreparation({
                   onChange={(e) => setNameDraft(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleNameModalConfirm();
-                    if (e.key === 'Escape') setShowNameModal(false);
                   }}
                   placeholder="e.g. TRIM Line — Assembly A"
                   maxLength={80}
@@ -1576,18 +1574,35 @@ function LayoutPreparation({
 
           const screenPts = pts.map(([cx, cy]) => toScreen(cx, cy));
           const d = 'M ' + screenPts.map(([x, y]) => `${x},${y}`).join(' L ');
+          const isSelected = selectedConnId === conn.id;
+
+          // Midpoint of the path for the delete button
+          const mid = screenPts[Math.floor(screenPts.length / 2)];
 
           return (
-            <g
-              key={conn.id}
-              style={{ pointerEvents: 'all', cursor: 'pointer' }}
-              onClick={() => handleDeleteConnection(conn.id)}
-            >
-              {/* Wide transparent hit-area so the line is easy to click */}
-              <path d={d} stroke="transparent" strokeWidth={12} fill="none" />
+            <g key={conn.id} style={{ pointerEvents: 'all' }}>
+              {/* Wide transparent hit-area */}
+              <path d={d} stroke="transparent" strokeWidth={12} fill="none"
+                    style={{ cursor: 'pointer' }}
+                    onClick={(e) => { e.stopPropagation(); setSelectedConnId(isSelected ? null : conn.id); }} />
               {/* Visible arrow */}
-              <path d={d} stroke="#1a2744" strokeWidth={2} fill="none"
-                    markerEnd="url(#lp-arrow-head)" />
+              <path d={d}
+                    stroke={isSelected ? '#e53935' : '#1a2744'}
+                    strokeWidth={isSelected ? 2.5 : 2}
+                    fill="none"
+                    markerEnd={isSelected ? 'url(#lp-arrow-head-sel)' : 'url(#lp-arrow-head)'}
+                    style={{ cursor: 'pointer' }}
+                    onClick={(e) => { e.stopPropagation(); setSelectedConnId(isSelected ? null : conn.id); }} />
+              {/* Delete × button — only shown when selected */}
+              {isSelected && mid && (
+                <g transform={`translate(${mid[0]}, ${mid[1]})`}
+                   style={{ cursor: 'pointer' }}
+                   onClick={(e) => { e.stopPropagation(); handleDeleteConnection(conn.id); setSelectedConnId(null); }}>
+                  <circle r={9} fill="#e53935" />
+                  <line x1="-4" y1="-4" x2="4" y2="4" stroke="white" strokeWidth={2} strokeLinecap="round" />
+                  <line x1="4" y1="-4" x2="-4" y2="4" stroke="white" strokeWidth={2} strokeLinecap="round" />
+                </g>
+              )}
             </g>
           );
         });
@@ -1606,7 +1621,17 @@ function LayoutPreparation({
                       refX="7" refY="3" orient="auto">
                 <polygon points="0 0, 8 3, 0 6" fill="#1a2744" />
               </marker>
+              <marker id="lp-arrow-head-sel" markerWidth="8" markerHeight="6"
+                      refX="7" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#e53935" />
+              </marker>
             </defs>
+            {/* Transparent full-screen click target to deselect arrow */}
+            {selectedConnId && (
+              <rect x="0" y="0" width="100%" height="100%"
+                    fill="transparent" style={{ cursor: 'default' }}
+                    onClick={() => setSelectedConnId(null)} />
+            )}
             {arrows}
           </svg>
         );

@@ -1229,7 +1229,7 @@ function LegendBox({ legendData, position, transformScale, onDragEnd }) {
 }
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
-function ZStageDashboard({ userId, activeLayoutId = null, refreshSignal = 0, isActive = true }) {
+function ZStageDashboard({ userId, activeLayoutId = null, refreshSignal = 0, savedLayouts = null, isActive = true }) {
   const [layouts, setLayouts]         = useState([]);
   const [selectedId, setSelectedId]   = useState(null);
   const [boxes, setBoxes]             = useState([]);
@@ -1306,8 +1306,9 @@ function ZStageDashboard({ userId, activeLayoutId = null, refreshSignal = 0, isA
     return Array.from(set).sort();
   }, [records]);
 
-  // Load layout list on mount; prefer the layout that's active in the editor
+  // Sync layout list from prop (kept up-to-date by ZStage parent) or fetch once if no prop
   useEffect(() => {
+    if (savedLayouts !== null) return; // handled by the prop-sync effect below
     layoutApi.getLayouts(userId)
       .then((r) => {
         const list = Array.isArray(r.data) ? r.data : [];
@@ -1316,7 +1317,6 @@ function ZStageDashboard({ userId, activeLayoutId = null, refreshSignal = 0, isA
           setError('No layouts found. Create and save a layout first.');
           return;
         }
-        // Auto-select the layout currently open in the editor, else first in list
         const preferred = activeLayoutId && list.find((l) => l.id === activeLayoutId);
         setSelectedId(preferred ? preferred.id : list[0].id);
       })
@@ -1324,6 +1324,26 @@ function ZStageDashboard({ userId, activeLayoutId = null, refreshSignal = 0, isA
         setError('Failed to load layouts — check backend is running on port 5000');
       });
   }, [userId]); // eslint-disable-line
+
+  // Keep layout list in sync when parent updates savedLayouts (create / delete)
+  useEffect(() => {
+    if (savedLayouts === null) return;
+    const list = Array.isArray(savedLayouts) ? savedLayouts : [];
+    setLayouts(list);
+    if (list.length === 0) {
+      setSelectedId(null);
+      setError('No layouts found. Create and save a layout first.');
+      return;
+    }
+    setError(null);
+    setSelectedId((prev) => {
+      // Keep current selection if it still exists
+      if (prev && list.find((l) => l.id === prev)) return prev;
+      // Prefer the layout open in the editor
+      const preferred = activeLayoutId && list.find((l) => l.id === activeLayoutId);
+      return preferred ? preferred.id : list[0].id;
+    });
+  }, [savedLayouts]); // eslint-disable-line
 
   // Load layout + records when selection changes
   useEffect(() => {
