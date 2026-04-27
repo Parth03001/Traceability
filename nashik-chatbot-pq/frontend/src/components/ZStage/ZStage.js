@@ -199,7 +199,7 @@ function ZStage() {
             onSaveLayout={(fn) => { saveHandlerRef.current = fn; }}
             onLoadLayout={(fn) => { loadHandlerRef.current = fn; }}
             onCopyLayout={(fn) => { copyHandlerRef.current = fn; }}
-            onSaved={() => setLayoutSaveSignal((s) => s + 1)}
+            onSaved={() => { setLayoutSaveSignal((s) => s + 1); refreshLayouts(); }}
             savedLayouts={savedLayouts}
             userId={userId}
             isActive={activeSection === 'layout'}
