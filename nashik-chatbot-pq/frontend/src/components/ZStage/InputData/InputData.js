@@ -914,7 +914,7 @@ const UPLOAD_TYPES = [
   { value: 'audit-adherence', label: 'Audit Adherence',  desc: 'Stage-wise adherence per auditor',     viewTab: 'audit-adherence' },
 ];
 
-export default function InputData({ userId, layouts = [] }) {
+export default function InputData({ userId, layouts = [], isActive = true }) {
   const [activeTab, setActiveTab] = useState('upload');
   // upload tab state
   const [uploadType, setUploadType] = useState('master');
@@ -1589,7 +1589,7 @@ export default function InputData({ userId, layouts = [] }) {
         />
       )}
 
-      <HelpGuide {...INPUT_HELP} />
+      <HelpGuide {...INPUT_HELP} active={isActive} />
 
       {/* ── Template preview modal ─────────────────────────────────────────── */}
       {templatePreviewModal && createPortal(

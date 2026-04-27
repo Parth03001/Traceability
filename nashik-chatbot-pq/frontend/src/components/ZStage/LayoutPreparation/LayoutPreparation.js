@@ -306,6 +306,7 @@ function LayoutPreparation({
   onSaved,
   savedLayouts = [],
   userId,
+  isActive = true,
 }) {
   const [boxes, setBoxes] = useState([]);
   const [buyoffIcons, setBuyoffIcons] = useState([]);
@@ -1613,7 +1614,7 @@ function LayoutPreparation({
 
 
     </Xwrapper>
-    <HelpGuide {...LAYOUT_HELP} />
+    <HelpGuide {...LAYOUT_HELP} active={isActive} />
     </>
   );
 }

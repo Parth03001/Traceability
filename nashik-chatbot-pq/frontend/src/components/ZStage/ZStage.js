@@ -202,6 +202,7 @@ function ZStage() {
             onSaved={() => setLayoutSaveSignal((s) => s + 1)}
             savedLayouts={savedLayouts}
             userId={userId}
+            isActive={activeSection === 'layout'}
           />
         </div>
 
@@ -210,7 +211,7 @@ function ZStage() {
           display: activeSection === 'input' ? 'flex' : 'none',
           flex: 1, flexDirection: 'column', overflow: 'hidden', minHeight: 0,
         }}>
-          <InputData userId={userId} layouts={savedLayouts} />
+          <InputData userId={userId} layouts={savedLayouts} isActive={activeSection === 'input'} />
         </div>
 
         {/* ZStageDashboard — always mounted so state survives tab switches  */}
@@ -222,6 +223,7 @@ function ZStage() {
             userId={userId}
             activeLayoutId={activeLayoutId}
             refreshSignal={layoutSaveSignal}
+            isActive={activeSection === 'dashboard'}
           />
         </div>
 

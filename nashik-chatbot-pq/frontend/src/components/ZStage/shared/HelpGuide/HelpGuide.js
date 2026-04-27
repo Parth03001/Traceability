@@ -6,7 +6,7 @@ import './HelpGuide.css';
 
 const STORAGE_KEY = 'help-fab-pos';
 
-function HelpGuide({ title, sections = [] }) {
+function HelpGuide({ title, sections = [], active = true }) {
   const [open, setOpen] = useState(false);
   const [fabPos, setFabPos] = useState(() => {
     try {
@@ -18,6 +18,9 @@ function HelpGuide({ title, sections = [] }) {
   const panelRef   = useRef(null);
   const fabRef     = useRef(null);
   const didDragRef = useRef(false);
+
+  // Close the panel whenever this guide becomes inactive (tab switch)
+  useEffect(() => { if (!active) setOpen(false); }, [active]);
 
   // Close on Escape key
   useEffect(() => {
@@ -36,6 +39,8 @@ function HelpGuide({ title, sections = [] }) {
     const t = setTimeout(() => document.addEventListener('mousedown', onClick), 50);
     return () => { clearTimeout(t); document.removeEventListener('mousedown', onClick); };
   }, [open]);
+
+  if (!active) return null;
 
   return createPortal(
     <>

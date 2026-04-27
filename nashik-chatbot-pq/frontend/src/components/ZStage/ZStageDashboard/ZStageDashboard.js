@@ -1229,7 +1229,7 @@ function LegendBox({ legendData, position, transformScale, onDragEnd }) {
 }
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
-function ZStageDashboard({ userId, activeLayoutId = null, refreshSignal = 0 }) {
+function ZStageDashboard({ userId, activeLayoutId = null, refreshSignal = 0, isActive = true }) {
   const [layouts, setLayouts]         = useState([]);
   const [selectedId, setSelectedId]   = useState(null);
   const [boxes, setBoxes]             = useState([]);
@@ -1848,7 +1848,7 @@ function ZStageDashboard({ userId, activeLayoutId = null, refreshSignal = 0 }) {
         />
       )}
     </Xwrapper>
-    <HelpGuide {...DASHBOARD_HELP} />
+    <HelpGuide {...DASHBOARD_HELP} active={isActive} />
     </>
   );
 }
