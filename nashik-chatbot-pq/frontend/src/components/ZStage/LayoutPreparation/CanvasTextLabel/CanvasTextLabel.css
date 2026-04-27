@@ -1,3 +1,9 @@
+/* ── Blink animation ── */
+@keyframes ctl-blink-border {
+  0%, 100% { border-color: #1a202c; box-shadow: 0 0 0 2px rgba(26, 32, 44, 0.35); }
+  50%       { border-color: #4a5568; box-shadow: 0 0 0 2px rgba(74, 85, 104, 0.1);  }
+}
+
 /* ── Wrapper ── */
 .ctl-wrap {
   position: absolute;
@@ -21,10 +27,15 @@
 }
 
 .ctl-editing {
-  border: 2px solid #3182ce !important;
+  border: 2px solid #1a202c !important;
   background: #fff !important;
   cursor: default;
-  box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.2);
+  box-shadow: 0 0 0 2px rgba(26, 32, 44, 0.2);
+}
+
+/* Alert: blink dark border until user types something */
+.ctl-alert {
+  animation: ctl-blink-border 0.7s ease-in-out infinite !important;
 }
 
 /* ── Display (not editing) ── */
@@ -32,7 +43,7 @@
   width: 100%;
   height: 100%;
   box-sizing: border-box;
-  padding: 1px 0;
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -61,7 +72,7 @@
   width: 100%;
   height: 100%;
   box-sizing: border-box;
-  padding: 1px 0;
+  padding: 4px;
   border: none;
   outline: none;
   resize: none;
@@ -71,8 +82,14 @@
   color: #1a202c;
   line-height: 1.4;
   text-align: center;
-  overflow: auto;
+  /* nowrap prevents mid-word visual breaks while the wrapper catches up in width.
+     Scrollbars are hidden; the textarea still auto-scrolls to follow the cursor. */
+  white-space: nowrap;
+  overflow: scroll;
+  scrollbar-width: none;
 }
+
+.ctl-ta::-webkit-scrollbar { display: none; }
 
 /* ── Toolbar ── */
 .ctl-toolbar {
@@ -183,28 +200,3 @@
 }
 
 .ctl-delete:hover { background: #fed7d7; }
-
-/* ── Resize handles ── */
-.ctl-rz {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: #fff;
-  border: 1.5px solid #3182ce;
-  border-radius: 50%;
-  z-index: 15;
-  opacity: 0;
-  transition: opacity 0.1s;
-}
-
-.ctl-wrap:hover .ctl-rz,
-.ctl-editing .ctl-rz { opacity: 1; }
-
-.ctl-rz-nw { top: -4px;    left: -4px;                             }
-.ctl-rz-ne { top: -4px;    right: -4px;                            }
-.ctl-rz-se { bottom: -4px; right: -4px;                            }
-.ctl-rz-sw { bottom: -4px; left: -4px;                             }
-.ctl-rz-n  { top: -4px;    left: 50%; transform: translateX(-50%); }
-.ctl-rz-s  { bottom: -4px; left: 50%; transform: translateX(-50%); }
-.ctl-rz-e  { right: -4px;  top: 50%;  transform: translateY(-50%); }
-.ctl-rz-w  { left: -4px;   top: 50%;  transform: translateY(-50%); }

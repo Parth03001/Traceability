@@ -19,10 +19,10 @@ const LAYOUT_HELP = {
       heading: 'Getting Started',
       items: [
         { icon: '➕', label: 'Add Box',         desc: 'Click "Add Box" in the sidebar to create a new station group. Enter a name, choose station IDs (Auto, Range, or Custom), and optionally add station names.' },
-        { icon: '💎', label: 'Add Buyoff',      desc: 'Click "Add Buyoff" in the sidebar to drop a diamond-shaped buyoff / bypass icon onto the canvas. Drag it to reposition; expand the diamond to connect ports or remove it.' },
+        { icon: '💎', label: 'Add Buyoff',      desc: 'Click "Add Buyoff" in the sidebar to drop a diamond-shaped buyoff / bypass icon onto the canvas. Drag it to reposition. Hover the diamond to reveal four directional port buttons (top / bottom / left / right) — drag from a port to connect it to another box or buyoff. Click the diamond to expand its accordion and remove it.' },
         { icon: '🔤', label: 'Add Text',        desc: 'Click "Add Text" in the sidebar to place a free text box anywhere on the canvas. Drag to move, resize from the corner/edge handles, and double-click to edit the text. An empty text box is auto-removed on click-away.' },
         { icon: '➡️', label: 'Add Arrow',       desc: 'Click "Add Arrow" in the sidebar to place a broad directional arrow on the canvas. Drag to move, resize from the handles, click to reveal a toolbar where you can rotate the arrow 90° or add a label.' },
-        { icon: '💾', label: 'Save Layout',     desc: 'Click "Save Layout" in the sidebar to manually save the current state. Changes are also auto-saved after 1.5 s — the cloud indicator in the toolbar shows Saved / Saving / Pending.' },
+        { icon: '💾', label: 'Save Layout',     desc: 'Click "Save Layout" in the sidebar to manually save the current state. Changes are also auto-saved after 1.5 s — the cloud indicator in the toolbar shows Saved / Saving / Pending / Error.' },
       ],
     },
     {
@@ -39,7 +39,7 @@ const LAYOUT_HELP = {
         { icon: '✋', label: 'Move',             desc: 'Drag a box by its header bar to reposition it. Boxes snap to the grid.' },
         { icon: '✏️', label: 'Edit Title',       desc: 'Double-click the box title to rename it inline.' },
         { icon: '🏷️', label: 'Edit Station ID',  desc: 'Double-click a green station ID header cell to rename that station.' },
-        { icon: '📝', label: 'Station Name',     desc: 'Double-click the blue row below a station ID to add or edit the station\'s display name.' },
+        { icon: '📝', label: 'Station Name',     desc: 'Double-click the blue row below a station ID to add or edit the station\'s display name. The name is saved automatically when you click away.' },
         { icon: '📄', label: 'Description',      desc: 'Click the grey description bar (below the blue row) to add a short description for the whole box.' },
         { icon: '🗑️', label: 'Delete Box',       desc: 'Click the × in the top-right corner of a box, or select the box and press Delete / Backspace.' },
       ],
@@ -55,7 +55,7 @@ const LAYOUT_HELP = {
       heading: 'Selection & Clipboard',
       items: [
         { icon: '🖱️', label: 'Select',           desc: 'Click a box to select it (blue outline). Hold Ctrl and click to multi-select.' },
-        { icon: '📋', label: 'Copy / Paste',     desc: 'Ctrl+C to copy selected boxes, Ctrl+V to paste with a small offset. Sidebar also has Copy and Paste buttons.' },
+        { icon: '📋', label: 'Copy / Paste',     desc: 'Ctrl+C to copy selected boxes and buyoff icons, Ctrl+V to paste with a small offset. Sidebar also has Copy and Paste buttons.' },
         { icon: '↩️', label: 'Undo / Redo',      desc: 'Ctrl+Z to undo, Ctrl+Y (or Ctrl+Shift+Z) to redo — up to 50 steps.' },
         { icon: '⌫',  label: 'Delete Selected',  desc: 'Press Delete or Backspace to remove all selected boxes at once.' },
         { icon: '⎋',  label: 'Deselect',         desc: 'Press Escape to clear the current selection.' },
@@ -98,8 +98,9 @@ const boxSize = (stationCount) => ({
 
 const snap = (v) => Math.round(v / GRID) * GRID;
 
-// Find the nearest grid-aligned spot to (baseCx, baseCy) that doesn't overlap any box
-const findClearSpot = (baseCx, baseCy, w, h, boxes) => {
+// Find the nearest grid-aligned spot to (baseCx, baseCy) that doesn't overlap any box.
+// extras: [{x, y, w, h}] for text labels, canvas arrows, buyoff icons, etc.
+const findClearSpot = (baseCx, baseCy, w, h, boxes, extras = []) => {
   const PAD = GRID;
   for (let r = 0; r <= 20; r++) {
     const candidates = r === 0
@@ -116,22 +117,32 @@ const findClearSpot = (baseCx, baseCy, w, h, boxes) => {
         ];
     for (const { x, y } of candidates) {
       if (x < GRID || y < GRID) continue;
-      const clear = boxes.every((b) => {
+      const clearBoxes = boxes.every((b) => {
         const bw = Math.max(2, b.stationIds?.length ?? 2) * GRID + 4;
         const bh = 5 * GRID;
         return (x + w + PAD <= b.position.x || b.position.x + bw + PAD <= x ||
                 y + h + PAD <= b.position.y || b.position.y + bh + PAD <= y);
       });
-      if (clear) return { x, y };
+      const clearExtras = extras.every((e) => (
+        x + w + PAD <= e.x || e.x + e.w + PAD <= x ||
+        y + h + PAD <= e.y || e.y + e.h + PAD <= y
+      ));
+      if (clearBoxes && clearExtras) return { x, y };
     }
   }
   return { x: Math.max(GRID, baseCx), y: Math.max(GRID, baseCy) };
 };
 
-// Bypass icon is 62×62px — snap so its visual center lands on a grid intersection
-const BYPASS_SIZE = 62;
-const BYPASS_HALF = BYPASS_SIZE / 2;
-const snapBypass = (v) => Math.round((v + BYPASS_HALF) / GRID) * GRID - BYPASS_HALF;
+// Bypass icon is 80×80px (exactly 2×2 grid squares). With BYPASS_HALF=40,
+// the top-left corner always snaps to a grid multiple, placing all four
+// diamond tips exactly on grid intersection lines.
+const BYPASS_SIZE = 80;
+const BYPASS_HALF = 40;
+
+const snapBypass = (v) => {
+  const nearestGridIntersection = Math.round((v + BYPASS_HALF) / GRID) * GRID;
+  return nearestGridIntersection - BYPASS_HALF;
+};
 
 const overlaps = (a, b) => {
   const sa = boxSize(a.stationCount ?? a.stationIds?.length ?? 2);
@@ -228,10 +239,15 @@ function stateFromApi(apiLayout) {
     textLabels = raw ? JSON.parse(raw) : [];
   } catch { textLabels = []; }
 
-  let canvasArrows = [];
+  let canvasArrows  = [];
+  let connWaypointsInit = {};
   try {
     const raw = apiLayout.canvas_arrows;
-    canvasArrows = raw ? JSON.parse(raw) : [];
+    const all = raw ? JSON.parse(raw) : [];
+    canvasArrows = all.filter((a) => !a.type || a.type === 'canvas_arrow');
+    all.filter((a) => a.type === 'conn_waypoints').forEach((a) => {
+      connWaypointsInit[a.connId] = a.waypoints;
+    });
   } catch { canvasArrows = []; }
 
   const connections = (apiLayout.connections || []).map((c) => {
@@ -275,7 +291,7 @@ function stateFromApi(apiLayout) {
     ? canvasArrows.map((a) => ({ ...a, x: a.x + shiftX, y: a.y + shiftY }))
     : canvasArrows;
 
-  return { boxes: shiftedBoxes, buyoffIcons: shiftedBuyoff, connections, textLabels: shiftedTextLabels, canvasArrows: shiftedArrows };
+  return { boxes: shiftedBoxes, buyoffIcons: shiftedBuyoff, connections, textLabels: shiftedTextLabels, canvasArrows: shiftedArrows, connWaypoints: connWaypointsInit };
 }
 
 function LayoutPreparation({
@@ -296,15 +312,21 @@ function LayoutPreparation({
   const [textLabels, setTextLabels] = useState([]);
   const [canvasArrows, setCanvasArrows] = useState([]);
   const [connections, setConnections] = useState([]);
+  // Connection waypoint state
+  const [selectedConnId, setSelectedConnId] = useState(null);           // currently selected connection
+  const [connWaypoints,  setConnWaypoints ] = useState({});             // { [connId]: [[x,y]...] }
+  const wpDragRef = useRef(null); // { connId, wpIdx } — active waypoint drag
   const [layoutName, setLayoutName] = useState('New Layout');
   const [editingName, setEditingName] = useState(false);
   const [currentLayoutId, setCurrentLayoutId] = useState(null);
   const [canvasScale, setCanvasScale] = useState(1);
   const [transformState, setTransformState] = useState({ scale: 1, positionX: 0, positionY: 0 });
+  const [newTextId,  setNewTextId ] = useState(null); // id of freshly-placed text label
+  const [newArrowId, setNewArrowId] = useState(null); // id of freshly-placed arrow
 
   // ── Selection + clipboard ────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState([]); // string[]
-  const [clipboard, setClipboard]     = useState(null); // box[] | null
+  const [clipboard, setClipboard]     = useState(null); // object: { boxes: [], buyoffs: [] }
 
   // ── Auto-save state ──────────────────────────────────────────────────────────
   // 'idle' | 'pending' | 'saving' | 'saved' | 'error'
@@ -324,9 +346,9 @@ function LayoutPreparation({
   const undoStackRef  = useRef([]);  // snapshots we can go back to
   const redoStackRef  = useRef([]);  // snapshots we can go forward to
   // Mirror refs so history callbacks always read current state without stale closure
-  const boxesRef      = useRef([]);
-  const buyoffRef     = useRef([]);
-  const connsRef      = useRef([]);
+  const boxesRef         = useRef([]);
+  const buyoffRef        = useRef([]);
+  const connsRef         = useRef([]);
   const textLabelsRef    = useRef([]);
   const canvasArrowsRef  = useRef([]);
   const transformStateRef = useRef({ scale: 1, positionX: 0, positionY: 0 });
@@ -343,8 +365,11 @@ function LayoutPreparation({
   useEffect(() => { if (autoSaveStatus === 'saved') onSavedRef.current?.(); }, [autoSaveStatus]);
 
   // Call BEFORE any mutation to snapshot the current state
+  const connWaypointsRef = useRef({});
+  useEffect(() => { connWaypointsRef.current = connWaypoints; }, [connWaypoints]);
+
   const pushHistory = useCallback(() => {
-    const snap = { boxes: boxesRef.current, buyoffIcons: buyoffRef.current, connections: connsRef.current, textLabels: textLabelsRef.current, canvasArrows: canvasArrowsRef.current };
+    const snap = { boxes: boxesRef.current, buyoffIcons: buyoffRef.current, connections: connsRef.current, textLabels: textLabelsRef.current, canvasArrows: canvasArrowsRef.current, connWaypoints: connWaypointsRef.current };
     undoStackRef.current = [...undoStackRef.current.slice(-49), snap];
     redoStackRef.current = [];
   }, []);
@@ -358,7 +383,7 @@ function LayoutPreparation({
     const prev = undoStackRef.current[undoStackRef.current.length - 1];
     undoStackRef.current = undoStackRef.current.slice(0, -1);
     redoStackRef.current = [
-      { boxes: boxesRef.current, buyoffIcons: buyoffRef.current, connections: connsRef.current, textLabels: textLabelsRef.current, canvasArrows: canvasArrowsRef.current },
+      { boxes: boxesRef.current, buyoffIcons: buyoffRef.current, connections: connsRef.current, textLabels: textLabelsRef.current, canvasArrows: canvasArrowsRef.current, connWaypoints: connWaypointsRef.current },
       ...redoStackRef.current.slice(0, 49),
     ];
     isLoadingRef.current = true;
@@ -376,7 +401,7 @@ function LayoutPreparation({
     redoStackRef.current = redoStackRef.current.slice(1);
     undoStackRef.current = [
       ...undoStackRef.current.slice(-49),
-      { boxes: boxesRef.current, buyoffIcons: buyoffRef.current, connections: connsRef.current, textLabels: textLabelsRef.current, canvasArrows: canvasArrowsRef.current },
+      { boxes: boxesRef.current, buyoffIcons: buyoffRef.current, connections: connsRef.current, textLabels: textLabelsRef.current, canvasArrows: canvasArrowsRef.current, connWaypoints: connWaypointsRef.current },
     ];
     isLoadingRef.current = true;
     setBoxes(next.boxes);
@@ -623,48 +648,77 @@ function LayoutPreparation({
 
   const clearSelection = useCallback(() => setSelectedIds([]), []);
 
-  // ── Copy selected boxes ───────────────────────────────────────────────────────
+  // ── Copy selected elements ────────────────────────────────────────────────────
   const handleCopySelected = useCallback(() => {
     if (selectedIds.length === 0) return;
-    const toCopy = boxes.filter((b) => selectedIds.includes(b.id));
-    setClipboard(toCopy);
-  }, [selectedIds, boxes]);
+
+    const boxesToCopy = boxes.filter((b) => selectedIds.includes(b.id));
+    const buyoffsToCopy = buyoffIcons.filter((ic) => selectedIds.includes(ic.id));
+
+    setClipboard({
+      boxes: boxesToCopy,
+      buyoffs: buyoffsToCopy,
+    });
+  }, [selectedIds, boxes, buyoffIcons]);
 
   // ── Paste clipboard ───────────────────────────────────────────────────────────
   const handlePaste = useCallback(() => {
-    if (!clipboard || clipboard.length === 0) return;
+    if (!clipboard) return;
     pushHistory();
-    const OFFSET = GRID * 2; // 80px offset so pasted boxes are visually distinct
-    setBoxes((prev) => {
-      let updated = [...prev];
-      const newIds = [];
-      for (const src of clipboard) {
-        const id = uid();
-        newIds.push(id);
-        const rawPos = { x: src.position.x + OFFSET, y: src.position.y + OFFSET };
-        const position = findValidPos(
-          { ...src, id, stationCount: src.stationIds.length },
-          rawPos,
-          updated,
-        );
-        updated = [...updated, { ...src, id, dbId: null, position }];
-      }
-      // Select the newly pasted boxes
-      setSelectedIds(newIds);
-      return updated;
-    });
-  }, [clipboard]);
 
-  // ── Delete selected boxes ─────────────────────────────────────────────────────
+    const OFFSET = GRID * 2; // 80px offset so pasted items are visually distinct
+    const newSelectedIds = [];
+
+    // 1. Paste Boxes
+    if (clipboard.boxes?.length > 0) {
+      setBoxes((prev) => {
+        let updated = [...prev];
+        for (const src of clipboard.boxes) {
+          const id = uid();
+          newSelectedIds.push(id);
+          const rawPos = { x: src.position.x + OFFSET, y: src.position.y + OFFSET };
+          const position = findValidPos(
+            { ...src, id, stationCount: src.stationIds.length },
+            rawPos,
+            updated
+          );
+          updated = [...updated, { ...src, id, dbId: null, position }];
+        }
+        return updated;
+      });
+    }
+
+    // 2. Paste Buyoffs
+    if (clipboard.buyoffs?.length > 0) {
+      setBuyoffIcons((prev) => {
+        const updatedBuyoffs = [...prev];
+        for (const src of clipboard.buyoffs) {
+          const id = uid();
+          newSelectedIds.push(id);
+          const position = {
+            x: snapBypass(src.position.x + OFFSET),
+            y: snapBypass(src.position.y + OFFSET),
+          };
+          updatedBuyoffs.push({ ...src, id, dbId: null, position });
+        }
+        return updatedBuyoffs;
+      });
+    }
+
+    setSelectedIds(newSelectedIds);
+  }, [clipboard, pushHistory]);
+
+  // ── Delete selected items ─────────────────────────────────────────────────────
   const handleDeleteSelected = useCallback(() => {
     if (selectedIds.length === 0) return;
     pushHistory();
     setBoxes((prev) => prev.filter((b) => !selectedIds.includes(b.id)));
+    setBuyoffIcons((prev) => prev.filter((b) => !selectedIds.includes(b.id)));
     setConnections((prev) =>
       prev.filter((c) => !selectedIds.includes(c.fromId.split('__')[0]) && !selectedIds.includes(c.toId.split('__')[0]))
     );
     setSelectedIds([]);
-  }, [selectedIds]);
+  }, [selectedIds, pushHistory]);
 
   const handleBoxNameChange = useCallback((id, newName) => {
     pushHistory();
@@ -725,11 +779,23 @@ function LayoutPreparation({
   const handleAddBuyoff = useCallback(() => {
     pushHistory();
     const id = uid();
+    const { positionX, positionY, scale } = transformStateRef.current;
+    const cw = canvasRef.current?.clientWidth  || 800;
+    const ch = canvasRef.current?.clientHeight || 600;
+    const W = BYPASS_SIZE, H = BYPASS_SIZE;
+    const baseCx = Math.max(GRID, Math.round((-positionX + cw / 2) / scale) - W / 2);
+    const baseCy = Math.max(GRID, Math.round((-positionY + ch / 2) / scale) - H / 2);
+    const extras = [
+      ...textLabelsRef.current.map((t) => ({ x: t.x, y: t.y, w: t.w || 160, h: t.h || 56 })),
+      ...canvasArrowsRef.current.map((a) => ({ x: a.x, y: a.y, w: a.w || 120, h: a.h || 50 })),
+      ...buyoffRef.current.map((b) => ({ x: b.position.x, y: b.position.y, w: BYPASS_SIZE, h: BYPASS_SIZE })),
+    ];
+    const raw = findClearSpot(baseCx, baseCy, W, H, boxesRef.current, extras);
     setBuyoffIcons((prev) => [
       ...prev,
-      { id, dbId: null, position: { x: snapBypass(GRID + prev.length * GRID * 2), y: snapBypass(GRID) }, name: '' },
+      { id, dbId: null, position: { x: snapBypass(raw.x), y: snapBypass(raw.y) }, name: '' },
     ]);
-  }, []);
+  }, [pushHistory]);
 
   const handleBuyoffNameChange = useCallback((id, newName) => {
     setBuyoffIcons((prev) => prev.map((b) => (b.id === id ? { ...b, name: newName } : b)));
@@ -745,8 +811,14 @@ function LayoutPreparation({
     const W = 160, H = 56;
     const baseCx = Math.max(GRID, Math.round((-positionX + cw / 2) / scale) - W / 2);
     const baseCy = Math.max(GRID, Math.round((-positionY + ch / 2) / scale) - H / 2);
-    const { x, y } = findClearSpot(baseCx, baseCy, W, H, boxesRef.current);
+    const extras = [
+      ...textLabelsRef.current.map((t) => ({ x: t.x, y: t.y, w: t.w || 160, h: t.h || 56 })),
+      ...canvasArrowsRef.current.map((a) => ({ x: a.x, y: a.y, w: a.w || 120, h: a.h || 50 })),
+      ...buyoffRef.current.map((b) => ({ x: b.position.x, y: b.position.y, w: BYPASS_SIZE, h: BYPASS_SIZE })),
+    ];
+    const { x, y } = findClearSpot(baseCx, baseCy, W, H, boxesRef.current, extras);
     setTextLabels((prev) => [...prev, { id, text: '', x, y, w: W, h: H }]);
+    setNewTextId(id);
   }, [pushHistory]);
 
   const handleTextLabelPositionChange = useCallback((id, pos) => {
@@ -774,11 +846,16 @@ function LayoutPreparation({
     const cw = canvasRef.current?.clientWidth  || 800;
     const ch = canvasRef.current?.clientHeight || 600;
     const W = 36, H = 20;
-    // Offset base slightly below centre so text and arrow don't land on the same spot
     const baseCx = Math.max(GRID, Math.round((-positionX + cw / 2) / scale) - W / 2);
-    const baseCy = Math.max(GRID, Math.round((-positionY + ch / 2) / scale) + 2 * GRID);
-    const { x, y } = findClearSpot(baseCx, baseCy, W, H, boxesRef.current);
+    const baseCy = Math.max(GRID, Math.round((-positionY + ch / 2) / scale) - H / 2);
+    const extras = [
+      ...textLabelsRef.current.map((t) => ({ x: t.x, y: t.y, w: t.w || 160, h: t.h || 56 })),
+      ...canvasArrowsRef.current.map((a) => ({ x: a.x, y: a.y, w: a.w || 120, h: a.h || 50 })),
+      ...buyoffRef.current.map((b) => ({ x: b.position.x, y: b.position.y, w: BYPASS_SIZE, h: BYPASS_SIZE })),
+    ];
+    const { x, y } = findClearSpot(baseCx, baseCy, W, H, boxesRef.current, extras);
     setCanvasArrows((prev) => [...prev, { id, direction: 'right', label: '', x, y, w: W, h: H }]);
+    setNewArrowId(id);
   }, [pushHistory]);
 
   const handleArrowSizeChange = useCallback((id, newSize) => {
@@ -831,7 +908,9 @@ function LayoutPreparation({
     const payload = {
       name: nameToSave,
       text_labels: JSON.stringify(textLabels.map(({ id, text, x, y, w, h }) => ({ id, text, x, y, w, h }))),
-      canvas_arrows: JSON.stringify(canvasArrows.map(({ id, direction, label, x, y, w, h }) => ({ id, direction, label, x, y, w, h }))),
+      canvas_arrows: JSON.stringify([
+        ...canvasArrows.map(({ id, direction, label, x, y, w, h }) => ({ id, direction, label, x, y, w, h })),
+      ]),
       boxes: boxes.map((b) => ({
         local_id: b.id,
         name: b.name,
@@ -940,7 +1019,9 @@ function LayoutPreparation({
     const payload = {
       name: copyName,
       text_labels: JSON.stringify(textLabels.map(({ id, text, x, y, w, h }) => ({ id, text, x, y, w, h }))),
-      canvas_arrows: JSON.stringify(canvasArrows.map(({ id, direction, label, x, y, w, h }) => ({ id, direction, label, x, y, w, h }))),
+      canvas_arrows: JSON.stringify([
+        ...canvasArrows.map(({ id, direction, label, x, y, w, h }) => ({ id, direction, label, x, y, w, h })),
+      ]),
       boxes: boxes.map((b) => ({
         local_id: b.id,
         name: b.name,
@@ -1121,7 +1202,9 @@ function LayoutPreparation({
       const payload = {
         name: trimmed,
         text_labels: JSON.stringify(textLabels.map(({ id, text, x, y, w, h }) => ({ id, text, x, y, w, h }))),
-      canvas_arrows: JSON.stringify(canvasArrows.map(({ id, direction, label, x, y, w, h }) => ({ id, direction, label, x, y, w, h }))),
+      canvas_arrows: JSON.stringify([
+        ...canvasArrows.map(({ id, direction, label, x, y, w, h }) => ({ id, direction, label, x, y, w, h })),
+      ]),
         boxes: boxes.map((b) => ({
           local_id: b.id,
           name: b.name,
@@ -1170,6 +1253,9 @@ function LayoutPreparation({
       isSavingRef.current = false;
     }
   }, [nameDraft, boxes, buyoffIcons, connections, userId]);
+
+  // Safely determine clipboard item count for UI text
+  const clipboardCount = clipboard ? (clipboard.boxes?.length || 0) + (clipboard.buyoffs?.length || 0) : 0;
 
   return (
     <>
@@ -1224,12 +1310,12 @@ function LayoutPreparation({
             {selectedIds.length > 0 ? (
               <div className="selection-bar">
                 <span className="selection-bar-count">
-                  {selectedIds.length} box{selectedIds.length !== 1 ? 'es' : ''} selected
+                  {selectedIds.length} item{selectedIds.length !== 1 ? 's' : ''} selected
                 </span>
                 <button className="selection-bar-btn" onClick={handleCopySelected} title="Copy (Ctrl+C)">
                   Copy
                 </button>
-                {clipboard && (
+                {clipboardCount > 0 && (
                   <button className="selection-bar-btn selection-bar-btn--paste" onClick={handlePaste} title="Paste (Ctrl+V)">
                     Paste
                   </button>
@@ -1244,13 +1330,13 @@ function LayoutPreparation({
             ) : (
               <>
                 <span className="layout-connect-hint">
-                  {clipboard
-                    ? `Clipboard: ${clipboard.length} box${clipboard.length !== 1 ? 'es' : ''} · Ctrl+V to paste`
+                  {clipboardCount > 0
+                    ? `Clipboard: ${clipboardCount} item${clipboardCount !== 1 ? 's' : ''} · Ctrl+V to paste`
                     : 'Drag from a port dot to connect · Click box to select'}
                 </span>
-                {clipboard && (
+                {clipboardCount > 0 && (
                   <button className="toolbar-btn toolbar-btn--paste" onClick={handlePaste} title="Paste (Ctrl+V)">
-                    Paste ({clipboard.length})
+                    Paste ({clipboardCount})
                   </button>
                 )}
               </>
@@ -1336,6 +1422,7 @@ function LayoutPreparation({
                         onTextChange={handleTextLabelTextChange}
                         onDelete={handleDeleteTextLabel}
                         canvasScale={canvasScale}
+                        autoEdit={tl.id === newTextId}
                       />
                     ))}
 
@@ -1353,6 +1440,7 @@ function LayoutPreparation({
                         onLabelChange={handleArrowLabelChange}
                         onDelete={handleDeleteArrow}
                         canvasScale={canvasScale}
+                        autoSelect={arrow.id === newArrowId}
                       />
                     ))}
 
@@ -1522,6 +1610,8 @@ function LayoutPreparation({
           </svg>
         );
       })()}
+
+
     </Xwrapper>
     <HelpGuide {...LAYOUT_HELP} />
     </>

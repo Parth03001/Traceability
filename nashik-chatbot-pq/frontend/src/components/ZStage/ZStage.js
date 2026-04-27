@@ -18,9 +18,9 @@ function ZStage() {
 
   // ── Layout Preparation state lifted to App so Sidebar can trigger it ──
   const [showAddBoxModal, setShowAddBoxModal] = useState(false);
-  const [addBuyoffSignal, setAddBuyoffSignal] = useState(0);
-  const [addTextSignal,   setAddTextSignal  ] = useState(0);
-  const [addArrowSignal,  setAddArrowSignal ] = useState(0);
+  const [addBuyoffSignal,   setAddBuyoffSignal  ] = useState(0);
+  const [addTextSignal,     setAddTextSignal    ] = useState(0);
+  const [addArrowSignal,    setAddArrowSignal   ] = useState(0);
   const [isSaving,        setIsSaving       ] = useState(false);
   const [savedLayouts,    setSavedLayouts   ] = useState([]);
   const [activeLayoutId,  setActiveLayoutId ] = useState(null);

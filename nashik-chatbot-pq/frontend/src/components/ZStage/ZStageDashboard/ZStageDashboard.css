@@ -444,24 +444,22 @@
 /* No trailing borders needed — all cell borders removed */
 
 /* ── Buyoff icon (read-only diamond — matches LayoutPreparation orange style)
-   Wrapper MUST be 80×92 px with padding-top: 6px so the diamond sits at the
-   same (40 px from left, 28 px from top) position that routeArrow.js expects.
-   Any mismatch here shifts the arrow endpoints away from the diamond tips. */
+   Wrapper is exactly 80×80 px (2×2 grid squares). Diamond tips land on grid
+   intersection lines. routeArrow.js ports: top(40,0) bottom(40,80)
+   left(0,40) right(80,40). */
 .dash-buyoff {
   position: relative;
   width: 80px;
-  height: 92px;
+  height: 80px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  padding-top: 6px;
+  justify-content: center;
   z-index: 5;
 }
 
 .dash-buyoff-diamond {
-  width: 44px;
-  height: 44px;
+  width: 56.6px;
+  height: 56.6px;
   background-color: #f6c90e;
   border: 2px solid #c9a000;
   transform: rotate(45deg);

@@ -50,15 +50,17 @@ function BuyoffIcon({ id, position: parentPosition, onPositionChange, onDelete, 
       grid={[40, 40]}
     >
       <div ref={nodeRef} id={id} className="buyoff-icon-wrapper">
-        <div className="buyoff-drag-handle buyoff-diamond" onClick={toggleExpand} title="Buyoff / Connect">
-          <span className="buyoff-diamond-inner"><GitBranch size={14} /></span>
-        </div>
+        <div className="buyoff-diamond-container">
+          <div className="buyoff-drag-handle buyoff-diamond" onClick={toggleExpand} title="Buyoff / Connect">
+            <span className="buyoff-diamond-inner"><GitBranch size={16} /></span>
+          </div>
 
-        {/* Connection ports — visible on hover, each has a direction-encoded id */}
-        <button id={`${id}__right`}  className="buyoff-port buyoff-port--right"  onMouseDown={handlePortDown} title="Drag to connect" />
-        <button id={`${id}__left`}   className="buyoff-port buyoff-port--left"   onMouseDown={handlePortDown} title="Drag to connect" />
-        <button id={`${id}__top`}    className="buyoff-port buyoff-port--top"    onMouseDown={handlePortDown} title="Drag to connect" />
-        <button id={`${id}__bottom`} className="buyoff-port buyoff-port--bottom" onMouseDown={handlePortDown} title="Drag to connect" />
+          {/* Connection ports attached to the 80x80 container boundaries */}
+          <button id={`${id}__top`}    className="buyoff-port buyoff-port--top"    onMouseDown={handlePortDown} title="Drag to connect" />
+          <button id={`${id}__bottom`} className="buyoff-port buyoff-port--bottom" onMouseDown={handlePortDown} title="Drag to connect" />
+          <button id={`${id}__left`}   className="buyoff-port buyoff-port--left"   onMouseDown={handlePortDown} title="Drag to connect" />
+          <button id={`${id}__right`}  className="buyoff-port buyoff-port--right"  onMouseDown={handlePortDown} title="Drag to connect" />
+        </div>
 
         {isExpanded && (
           <div className="buyoff-accordion">

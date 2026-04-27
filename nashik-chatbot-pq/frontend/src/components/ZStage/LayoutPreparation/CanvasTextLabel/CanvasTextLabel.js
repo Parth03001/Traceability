@@ -20,7 +20,8 @@ function detectPreset(w) {
   return 'L';
 }
 
-// Measure the pixel width of the longest line at a given font size
+// Measure the pixel width of the longest line at a given font size.
+// +12 accounts for left+right padding (8px) and border (3–4px) so text never clips.
 function measureWidth(text, fontSize) {
   const ff   = getComputedStyle(document.body).fontFamily || 'Arial,sans-serif';
   const lines = (text || 'W').split('\n');
@@ -32,9 +33,15 @@ function measureWidth(text, fontSize) {
   );
   span.textContent = longest;
   document.body.appendChild(span);
-  const w = Math.max(MIN_W, Math.ceil(span.offsetWidth) + 4);
+  const w = Math.max(MIN_W, Math.ceil(span.offsetWidth) + 12);
   document.body.removeChild(span);
   return w;
+}
+
+// Calculate box height: lines × lineHeight + top/bottom padding + border
+function measureHeight(text, fontSize) {
+  const lines = (text || '').split('\n').length;
+  return Math.max(MIN_H, Math.ceil(lines * fontSize * 1.4) + 12);
 }
 
 export default function CanvasTextLabel({
@@ -47,11 +54,13 @@ export default function CanvasTextLabel({
   onTextChange,
   onDelete,
   canvasScale,
+  autoEdit,
 }) {
   const initPreset = detectPreset(parentSize?.w || 80);
   const initFS     = PRESETS[initPreset].fs;
-  const initW      = parentSize?.w || measureWidth(parentText || '', initFS);
-  const initH      = parentSize?.h || MIN_H;
+  // Always derive from text so old saved labels with wrong heights auto-correct on load
+  const initW      = parentText ? measureWidth(parentText, initFS) : (parentSize?.w || MIN_W);
+  const initH      = parentText ? measureHeight(parentText, initFS) : (parentSize?.h || MIN_H);
 
   const [pos,     setPos    ] = useState(parentPos || { x: 40, y: 40 });
   const [size,    setSize   ] = useState({ w: initW, h: initH });
@@ -70,16 +79,18 @@ export default function CanvasTextLabel({
 
   const fontSize = PRESETS[preset].fs;
 
-  // Auto-size while editing: height from scrollHeight, width from longest-line measurement
+  // Auto-enter edit mode for freshly-placed labels
   useEffect(() => {
-    if (!editing || !taRef.current) return;
-    // Height
-    taRef.current.style.height = '1px';
-    const sh = taRef.current.scrollHeight;
-    taRef.current.style.height = '';
-    setLiveH(Math.max(MIN_H, sh + 2));
-    // Width
+    if (autoEdit) setEditing(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-size while editing: width from longest-line measurement, height from line count.
+  // Using explicit formula (not scrollHeight) avoids dependency on the current wrapper width.
+  useEffect(() => {
+    if (!editing) return;
     setLiveW(measureWidth(text, fontSize));
+    setLiveH(measureHeight(text, fontSize));
   }, [text, editing, fontSize]);
 
   // Display size: live while editing, saved size otherwise
@@ -120,14 +131,11 @@ export default function CanvasTextLabel({
     };
   }, [editing, pos.x, pos.y, dispW, dispH]);
 
-  // Save: commit live size (width fits text, height fits lines)
+  // Save: commit final size using same formula as live auto-size
   const handleSave = useCallback(() => {
     const trimmed = text.trim();
     if (!trimmed) { onDelete?.(id); return; }
-    const finalW = measureWidth(trimmed, fontSize);
-    const lines  = trimmed.split('\n').length;
-    const finalH = Math.max(MIN_H, Math.ceil(lines * fontSize * 1.4) + 2);
-    const final  = { w: finalW, h: finalH };
+    const final = { w: measureWidth(trimmed, fontSize), h: measureHeight(trimmed, fontSize) };
     setSize(final);
     setLiveW(null);
     setLiveH(null);
@@ -154,43 +162,8 @@ export default function CanvasTextLabel({
   // S / M / L only changes font size — width/height recalculate automatically
   const applyPreset = (key) => setPreset(key);
 
-  // Resize handles (manual override)
-  const beginResize = (corner, e) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const sc = canvasScale || 1;
-    const s0 = { cx0: e.clientX, cy0: e.clientY, px0: pos.x, py0: pos.y, w0: size.w, h0: size.h };
-
-    const calc = (ev) => {
-      const dx = (ev.clientX - s0.cx0) / sc;
-      const dy = (ev.clientY - s0.cy0) / sc;
-      let x = s0.px0, y = s0.py0, w = s0.w0, h = s0.h0;
-      if (corner.includes('e'))  w = Math.max(MIN_W, s0.w0 + dx);
-      if (corner.includes('w')) { w = Math.max(MIN_W, s0.w0 - dx); x = s0.px0 + s0.w0 - w; }
-      if (corner.includes('s'))  h = Math.max(MIN_H, s0.h0 + dy);
-      if (corner.includes('n')) { h = Math.max(MIN_H, s0.h0 - dy); y = s0.py0 + s0.h0 - h; }
-      return { x, y, w, h };
-    };
-
-    const onMove = (ev) => { const r = calc(ev); setPos({ x: r.x, y: r.y }); setSize({ w: r.w, h: r.h }); };
-    const onUp   = (ev) => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      const r = calc(ev);
-      setPos({ x: r.x, y: r.y });
-      setSize({ w: r.w, h: r.h });
-      onPositionChange?.(id, { x: r.x, y: r.y });
-      onSizeChange?.(id, { w: r.w, h: r.h });
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  };
-
-  const CURSORS = {
-    nw: 'nwse-resize', n: 'ns-resize',  ne: 'nesw-resize', e: 'ew-resize',
-    se: 'nwse-resize', s: 'ns-resize',  sw: 'nesw-resize', w: 'ew-resize',
-  };
+  // Alert (blink) class: active while editing and no text has been typed yet
+  const isAlert = editing && !text.trim();
 
   const toolbar = editing && tbPos && createPortal(
     <div
@@ -226,11 +199,10 @@ export default function CanvasTextLabel({
         onDrag={(_, d) => { dragRef.current = true; setPos({ x: d.x, y: d.y }); }}
         onStop={(_, d) => { if (dragRef.current) onPositionChange?.(id, { x: d.x, y: d.y }); }}
         scale={canvasScale || 1}
-        cancel=".ctl-rz"
       >
         <div
           ref={wrapRef}
-          className={`ctl-wrap${editing ? ' ctl-editing' : ''}`}
+          className={`ctl-wrap${editing ? ' ctl-editing' : ''}${isAlert ? ' ctl-alert' : ''}`}
           style={{ width: dispW, height: dispH }}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); if (!dragRef.current) setEditing(true); }}
@@ -251,15 +223,6 @@ export default function CanvasTextLabel({
               {text || <span className="ctl-ph">Type here…</span>}
             </div>
           )}
-
-          {['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map((c) => (
-            <div
-              key={c}
-              className={`ctl-rz ctl-rz-${c}`}
-              style={{ cursor: CURSORS[c] }}
-              onMouseDown={(e) => beginResize(c, e)}
-            />
-          ))}
         </div>
       </Draggable>
       {toolbar}

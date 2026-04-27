@@ -3,18 +3,29 @@
   z-index: 10;
   user-select: none;
   width: 80px;
-  height: 92px;
+  /* Removed fixed height so it can naturally expand for the name label */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding-top: 6px;
   gap: 0;
 }
 
+/* New 80x80 container so the diamond matches exactly 2x2 grid squares */
+.buyoff-diamond-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .buyoff-diamond {
-  width: 44px;
-  height: 44px;
+  /* 56.6px width/height gives a diagonal of exactly 80px */
+  width: 56.6px;
+  height: 56.6px;
+  box-sizing: border-box;
   background-color: #f6c90e;
   transform: rotate(45deg);
   cursor: grab;
@@ -67,19 +78,17 @@
   transform: scale(1.4) !important;
 }
 
-/* Diamond center in wrapper: x=40, y=28. Half-diagonal≈31px.
-   Tip offsets from wrapper top-left:  top(40,-3) bot(40,59) left(9,28) right(71,28).
-   Port is 10×10 px, so subtract 5 from each axis for top-left anchor. */
-.buyoff-port--top    { top: -8px;  left: 35px; }
-.buyoff-port--bottom { top: 54px;  left: 35px; }
-.buyoff-port--left   { left:  4px; top:  23px; }
-.buyoff-port--right  { left: 66px; top:  23px; }
+/* Ports now align perfectly to the center of the 80x80 container edges */
+.buyoff-port--top    { top: -5px;  left: 35px; }
+.buyoff-port--bottom { bottom: -5px; left: 35px; }
+.buyoff-port--left   { left: -5px; top: 35px; }
+.buyoff-port--right  { right: -5px; top: 35px; }
 
 /* Accordion panel */
 .buyoff-accordion {
   position: absolute;
-  left: 68px;
-  top: 0;
+  left: 72px;
+  top: 10px;
   background-color: #ffffff;
   border: 1px solid var(--border-color);
   border-radius: 6px;
@@ -179,10 +188,8 @@
   align-items: center;
   justify-content: center;
   cursor: text;
-  /* Push label well below the diamond's rotated lower tip (≈31px below div center).
-     Diamond div is 44px, its visual bottom tip protrudes ~9px past the box edge.
-     So we add 12px margin-top to clear that tip comfortably. */
-  margin-top: 12px;
+  /* The diamond now fits exactly in the 80x80 box, so we just need a tiny gap */
+  margin-top: 4px;
 }
 
 .buyoff-name-label {
@@ -195,7 +202,7 @@
   text-overflow: ellipsis;
   max-width: 78px;
   line-height: 1.3;
-  padding: 1px 3px;
+  padding: 1px 8px;
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.75);
 }
@@ -219,7 +226,7 @@
   width: 76px;
   border: 1px solid var(--mahindra-red, #c0392b);
   border-radius: 3px;
-  padding: 1px 4px;
+  padding: 1px 8px;
   background: #fff;
   outline: none;
   line-height: 1.4;

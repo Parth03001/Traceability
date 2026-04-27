@@ -414,3 +414,8 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ── Draw Path mode ──────────────────────────────────────────────────────── */
+.layout-canvas--draw { cursor: crosshair !important; user-select: none; }
+.layout-canvas--draw * { pointer-events: none; }
+.layout-canvas--draw .dp-overlay { pointer-events: all; }

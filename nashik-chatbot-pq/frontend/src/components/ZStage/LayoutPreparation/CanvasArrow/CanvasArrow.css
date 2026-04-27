@@ -1,3 +1,9 @@
+/* ── Blink animation for freshly-placed arrows ── */
+@keyframes ca-blink-border {
+  0%, 100% { border-color: #276749; box-shadow: 0 0 0 3px rgba(39, 103, 73, 0.4); }
+  50%       { border-color: #9ae6b4; box-shadow: 0 0 0 3px rgba(154, 230, 180, 0.1); }
+}
+
 /* ── Wrapper ──────────────────────────────────────────────────────────────────
    Invisible by default — the arrow body itself is visible but the bounding
    box is not.  Shows on hover and when selected.                             */
@@ -29,6 +35,11 @@
   border: 1.5px solid #38a169 !important;
   box-shadow: 0 0 0 2px rgba(56, 161, 105, 0.18);
   cursor: default;
+}
+
+/* ── New arrow: blink until user clicks OK ───────────────────────────────── */
+.ca-wrap--new {
+  animation: ca-blink-border 0.65s ease-in-out infinite !important;
 }
 
 /* ── SVG arrow — fills the entire bounding box ───────────────────────────── */

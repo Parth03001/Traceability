@@ -232,7 +232,7 @@ function Sidebar({ activeSection, onSectionChange, layoutActions }) {
                   <Diamond size={14} className="sidebar-diamond-icon" /> Add Buyoff
                 </button>
 
-                <button className="sidebar-sub-btn sidebar-sub-btn--text" onClick={onAddText}>
+<button className="sidebar-sub-btn sidebar-sub-btn--text" onClick={onAddText}>
                   <Type size={14} /> Add Text
                 </button>
 
